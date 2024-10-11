@@ -1,0 +1,12 @@
+.idea
+*.png
+*.jpeg
+*.mp4
+*.mov
+*.avi
+*.json
+*.xml
+*.csv
+*.txt
+*.zip
+*.pt
