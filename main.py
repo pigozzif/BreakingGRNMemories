@@ -1,11 +1,13 @@
 import os
 
+import numpy as np
+from matplotlib import pyplot as plt
 from sb3_contrib import RecurrentPPO
 from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 
-from envs import MotionEquation
+from envs import MotionEquation, GRNEnv
 from plotting import plot_reward
 from utils import parse_args, set_seed, get_file_name
 
