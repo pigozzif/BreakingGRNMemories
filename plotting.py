@@ -11,8 +11,8 @@ def plot_reward(file_name):
             continue
         data = pd.read_csv(os.path.join("output", file), sep=",", skiprows=1)
         plt.plot(data["r"][1:], label="-".join([file.split(".")[-3], file.split(".")[-2]]))
-    plt.xlabel("RL time steps")
-    plt.ylabel("reward")
+    plt.xlabel("RL time steps", fontsize=10)
+    plt.ylabel("reward", fontsize=10)
     plt.legend()
     plt.savefig(os.path.join("figures", ".".join([task, "png"])))
     plt.close()
