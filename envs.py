@@ -1,4 +1,6 @@
 import abc
+import os
+import pickle
 
 import gymnasium
 import jax
@@ -7,16 +9,18 @@ import scipy.integrate
 from gymnasium.spaces import Box
 
 from grn import GeneRegulatoryNetwork
-from utils import create_system_rollout_module
+from utils import create_system_rollout_module, get_memory_file
 
 
 class EquationEnv(gymnasium.Env, abc.ABC):
 
-    def __init__(self, obs_dim, dt=0.01):
+    def __init__(self, obs_dim, action_bound, dt=0.01):
         self.obs_dim = obs_dim
         self.dt = dt
         self.x = self.get_init_conditions(obs_dim=obs_dim)
         self.t = 0
+        self.observation_space = Box(low=float("-inf"), high=float("inf"), shape=(self.obs_dim,))
+        self.action_space = Box(low=-action_bound, high=action_bound, shape=(self.obs_dim,))
 
     @abc.abstractmethod
     def _step(self, t, y):
@@ -44,12 +48,10 @@ class EquationEnv(gymnasium.Env, abc.ABC):
 
 class MotionEquation(EquationEnv):
 
-    def __init__(self, obs_dim=2, target=10, tol=1e-5):
-        super().__init__(obs_dim)
+    def __init__(self, obs_dim=2, action_bound=0.1, target=10, tol=1e-5):
+        super().__init__(obs_dim, action_bound)
         self.target = np.full(self.x.shape, fill_value=target)
         self.tol = tol
-        self.observation_space = Box(low=float("-inf"), high=float("inf"), shape=(self.obs_dim,))
-        self.action_space = Box(low=-1e2, high=1e2, shape=(self.obs_dim,))
 
     def get_species_names(self):
         return ["x"]
@@ -72,14 +74,12 @@ class MotionEquation(EquationEnv):
 
 class LotkaVolterraEquation(EquationEnv):
 
-    def __init__(self, obs_dim=2, alpha=1.1, beta=0.4, gamma=0.4, delta=0.1):
-        super().__init__(obs_dim)
+    def __init__(self, obs_dim=2, action_bound=0.1, alpha=1.1, beta=0.4, gamma=0.4, delta=0.1):
+        super().__init__(obs_dim, action_bound)
         self.a = alpha
         self.b = beta
         self.g = gamma
         self.d = delta
-        self.observation_space = Box(low=float("-inf"), high=float("inf"), shape=(obs_dim,))
-        self.action_space = Box(low=-0.1, high=0.1, shape=(obs_dim,))
         self.true_x = scipy.integrate.odeint(func=lambda y_t, t: self._step(y=y_t),
                                              y0=self.x,
                                              t=[self.t + i / 100 for i in range(int(1 / self.dt) * 100)])
@@ -111,8 +111,8 @@ class LotkaVolterraEquation(EquationEnv):
 
 class SchrodingerEquation(EquationEnv):
 
-    def __init__(self, obs_dim=1, hbar=1, kx=0.1, m=1, sigma=0.1, dt=0.01):
-        super().__init__(obs_dim, dt)
+    def __init__(self, obs_dim=1, action_bound=0.1, hbar=1, kx=0.1, m=1, sigma=0.1):
+        super().__init__(obs_dim, action_bound)
         self.hbar = hbar
         self.kx = kx
         self.m = m
@@ -127,8 +127,6 @@ class SchrodingerEquation(EquationEnv):
         self.k = self.omega ** 2 * m
         self.v = 0.5 * self.k * (self.x - self.x_vmin) ** 2
         self.t = 0
-        self.observation_space = Box(low=float("-inf"), high=float("inf"), shape=(obs_dim,))
-        self.action_space = Box(low=-0.1, high=0.1, shape=(obs_dim,))
 
     def get_init_conditions(self, obs_dim):
         return np.ones(1)
@@ -156,12 +154,17 @@ class SchrodingerEquation(EquationEnv):
 
 
 class GRNEnv(EquationEnv):
+    NUM_PULSES = 5
 
-    def __init__(self, seed, biomodel_idx, obs_dim):
-        super().__init__(obs_dim)
+    def __init__(self, seed, obs_dim, biomodel_idx, circuit_idx=0):
+        super().__init__(obs_dim, 0.1)
         self.grn = GeneRegulatoryNetwork.create(biomodel_idx=biomodel_idx)
-        self.w = None
-        self.c = None
+        self.e = pickle.load(open(os.path.join("memories", get_memory_file(biomodel_idx=biomodel_idx,
+                                                                           circuit_idx=circuit_idx)), "rb"))
+
+        self.x = self.e[0]
+        self.w = self.e[1]
+        self.c = self.e[2]
         self.key = jax.random.PRNGKey(seed)
 
     def _step(self, t, y):
@@ -171,8 +174,9 @@ class GRNEnv(EquationEnv):
                         c=self.c)[0]
 
     def get_init_conditions(self, obs_dim):
-        system = create_system_rollout_module(self.grn.config)
-        return system.y0
+        if not hasattr(self, "e"):
+            return np.zeros(obs_dim)  # TODO: silly
+        return self.e[0]
 
     def get_species_names(self):
         system = create_system_rollout_module(self.grn.config)
@@ -189,6 +193,6 @@ class GRNEnv(EquationEnv):
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed, options=options)
-        self.w = None
-        self.c = None
+        self.w = self.e[1]
+        self.c = self.e[2]
         return self.x, {}

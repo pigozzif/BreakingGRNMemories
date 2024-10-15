@@ -27,6 +27,10 @@ def get_file_name(seed, task, algorithm, policy):
     return ".".join([str(seed), str(task), str(algorithm), str(policy)])
 
 
+def get_memory_file(biomodel_idx, circuit_idx):
+    return ".".join([str(biomodel_idx), str(circuit_idx), "pickle"])
+
+
 def create_system_rollout_module(system_rollout_config, y0=None, w0=None, c=None):
     if system_rollout_config.system_type == "grn":
         spec = importlib.util.spec_from_file_location("JaxBioModelSpec", system_rollout_config.model_filepath)

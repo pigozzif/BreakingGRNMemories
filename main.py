@@ -1,7 +1,6 @@
 import os
 
 import numpy as np
-import scipy
 from matplotlib import pyplot as plt
 from sb3_contrib import RecurrentPPO
 from stable_baselines3 import PPO
@@ -21,7 +20,7 @@ def get_env(env_name, seed):
     elif env_name == "schrodinger":
         return SchrodingerEquation()
     elif env_name.isnumeric():
-        return GRNEnv(seed=seed, biomodel_idx=int(env_name))
+        return GRNEnv(seed=seed, biomodel_idx=int(env_name), obs_dim=3)
     raise ValueError("Invalid env name: {}".format(env_name))
 
 
@@ -33,7 +32,7 @@ def get_algorithm(algorithm, **kwargs):
     raise ValueError("Invalid algorithm name: {}".format(algorithm))
 
 
-def train(seed, task, algorithm, policy, num_steps=int(2e5)):
+def train(seed, task, algorithm, policy, num_steps=int(2e2)):
     file_name = get_file_name(seed=seed, task=task, algorithm=algorithm, policy=policy)
     env = Monitor(env=get_env(env_name=task, seed=seed),
                   filename=os.path.join("output", "monitor.csv"))
@@ -49,7 +48,7 @@ def evaluate(model):
     return mean_reward, std_reward
 
 
-def save_rendering(model, file_name, num_steps=100):
+def save_rendering(model, file_name, num_steps=2500):
     vec_env = model.get_env()
     obs = vec_env.reset()
     data = np.zeros((num_steps, vec_env.observation_space.shape[0]))

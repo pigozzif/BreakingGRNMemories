@@ -7,7 +7,7 @@ from autodiscjax import DictTree
 from autodiscjax.modules import grnwrappers
 
 from grn import *
-from utils import parse_args, set_seed
+from utils import parse_args, set_seed, get_memory_file
 
 
 class Regulation(IntEnum):
@@ -166,9 +166,9 @@ class AssociativeLearning(object):
                 mean_relax - np.mean(e1.ys[response, :])) / 2.0
 
     def save_memory(self, e3):
-        pickle.dump([e3.ys[:, -1], e3.ws[:, -1], e3.cs[:, -1]], open(os.path.join("memories", ".".join([str(self.i),
-                                                                                                        str(self.idx),
-                                                                                                        "pickle"])),
+        pickle.dump([e3.ys[:, -1], e3.ws[:, -1], e3.cs[:, -1]], open(os.path.join("memories",
+                                                                                  get_memory_file(biomodel_idx=self.i,
+                                                                                                  circuit_idx=self.idx)),
                                                                      "wb"))
         self.idx += 1
 
