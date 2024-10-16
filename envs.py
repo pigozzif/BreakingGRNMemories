@@ -1,12 +1,14 @@
 import abc
 import os
 import pickle
+from typing import Iterable
 
 import gymnasium
 import jax
 import numpy as np
 import scipy.integrate
 from gymnasium.spaces import Box
+from matplotlib import pyplot as plt
 
 from grn import GeneRegulatoryNetwork
 from utils import create_system_rollout_module, get_memory_file
@@ -14,20 +16,22 @@ from utils import create_system_rollout_module, get_memory_file
 
 class EquationEnv(gymnasium.Env, abc.ABC):
 
-    def __init__(self, obs_dim, action_bound, dt=0.01):
+    def __init__(self, obs_dim, action_bounds, dt=0.01):
         self.obs_dim = obs_dim
         self.dt = dt
-        self.x = self.get_init_conditions(obs_dim=obs_dim)
+        self.x = np.zeros(obs_dim)
         self.t = 0
         self.observation_space = Box(low=float("-inf"), high=float("inf"), shape=(self.obs_dim,))
-        self.action_space = Box(low=-action_bound, high=action_bound, shape=(self.obs_dim,))
+        if isinstance(action_bounds, float):
+            action_bounds = np.array([action_bounds for _ in range(obs_dim)])
+        self.action_space = Box(low=-action_bounds, high=action_bounds, shape=(self.obs_dim,))
 
     @abc.abstractmethod
     def _step(self, t, y):
         pass
 
     @abc.abstractmethod
-    def get_init_conditions(self, obs_dim):
+    def get_init_conditions(self):
         pass
 
     @abc.abstractmethod
@@ -35,7 +39,7 @@ class EquationEnv(gymnasium.Env, abc.ABC):
         pass
 
     def reset(self, *, seed=None, options=None):
-        self.x = self.get_init_conditions(obs_dim=self.obs_dim)
+        self.x = self.get_init_conditions()
         self.t = 0
         return self.x, {}
 
@@ -48,15 +52,15 @@ class EquationEnv(gymnasium.Env, abc.ABC):
 
 class MotionEquation(EquationEnv):
 
-    def __init__(self, obs_dim=2, action_bound=0.1, target=10, tol=1e-5):
-        super().__init__(obs_dim, action_bound)
+    def __init__(self, obs_dim=2, action_bounds=0.1, target=10, tol=1e-5):
+        super().__init__(obs_dim, action_bounds)
         self.target = np.full(self.x.shape, fill_value=target)
         self.tol = tol
 
     def get_species_names(self):
         return ["x"]
 
-    def get_init_conditions(self, obs_dim):
+    def get_init_conditions(self):
         return np.zeros(self.obs_dim)
 
     def _step(self, t, y):
@@ -74,8 +78,9 @@ class MotionEquation(EquationEnv):
 
 class LotkaVolterraEquation(EquationEnv):
 
-    def __init__(self, obs_dim=2, action_bound=0.1, alpha=1.1, beta=0.4, gamma=0.4, delta=0.1):
-        super().__init__(obs_dim, action_bound)
+    def __init__(self, obs_dim=2, action_bounds=0.1, alpha=1.1, beta=0.4, gamma=0.4, delta=0.1):
+        super().__init__(obs_dim, action_bounds)
+        self.x = np.full(self.obs_dim, fill_value=10)
         self.a = alpha
         self.b = beta
         self.g = gamma
@@ -87,8 +92,8 @@ class LotkaVolterraEquation(EquationEnv):
     def get_species_names(self):
         return ["rabbits", "foxes"]
 
-    def get_init_conditions(self, obs_dim):
-        return np.full(obs_dim, fill_value=10)
+    def get_init_conditions(self):
+        return np.full(self.obs_dim, fill_value=10)
 
     def _step(self, t, y):
         xy = y[0] * y[1]
@@ -111,8 +116,8 @@ class LotkaVolterraEquation(EquationEnv):
 
 class SchrodingerEquation(EquationEnv):
 
-    def __init__(self, obs_dim=1, action_bound=0.1, hbar=1, kx=0.1, m=1, sigma=0.1):
-        super().__init__(obs_dim, action_bound)
+    def __init__(self, obs_dim=1, action_bounds=0.1, hbar=1, kx=0.1, m=1, sigma=0.1):
+        super().__init__(obs_dim, action_bounds)
         self.hbar = hbar
         self.kx = kx
         self.m = m
@@ -127,9 +132,10 @@ class SchrodingerEquation(EquationEnv):
         self.k = self.omega ** 2 * m
         self.v = 0.5 * self.k * (self.x - self.x_vmin) ** 2
         self.t = 0
+        self.x = self.get_init_conditions()
 
-    def get_init_conditions(self, obs_dim):
-        return np.ones(1)
+    def get_init_conditions(self):
+        return np.ones(self.obs_dim)
 
     def _step(self, t, y):
         return -1j * (- 0.5 * self.hbar / self.m * self.d2.dot(y) + self.v / self.hbar * y)
@@ -149,23 +155,26 @@ class SchrodingerEquation(EquationEnv):
         self.x = np.sqrt(np.square(sol.y.real) + np.square(sol.y.imag))[-1]
         return self.x, reward, done, False, {}
 
-    def render(self):
-        return None
-
 
 class GRNEnv(EquationEnv):
-    NUM_PULSES = 5
 
-    def __init__(self, seed, obs_dim, biomodel_idx, circuit_idx=0):
-        super().__init__(obs_dim, 0.1)
+    def __init__(self, seed, obs_dim, biomodel_idx, r, ucs, cs, scale_a=10.0):
+        super().__init__(obs_dim, 1.0)
         self.grn = GeneRegulatoryNetwork.create(biomodel_idx=biomodel_idx)
         self.e = pickle.load(open(os.path.join("memories", get_memory_file(biomodel_idx=biomodel_idx,
-                                                                           circuit_idx=circuit_idx)), "rb"))
+                                                                           r=r,
+                                                                           ucs=ucs,
+                                                                           cs=cs)), "rb"))
 
-        self.x = self.e[0]
+        self.x = self.get_init_conditions()
         self.w = self.e[1]
         self.c = self.e[2]
+        self.r = int(r)
+        self.ranges = [abs(self.e[3][i][1] - self.e[3][i][0]) for i in range(self.obs_dim)]
+        self.ranges.pop(self.r)
         self.key = jax.random.PRNGKey(seed)
+        self.action_space = Box(low=-1.0, high=1.0, shape=(self.obs_dim - 1,))
+        self.scale_a = scale_a
 
     def _step(self, t, y):
         return self.grn(key=self.key,
@@ -173,17 +182,20 @@ class GRNEnv(EquationEnv):
                         w0=self.w,
                         c=self.c)[0]
 
-    def get_init_conditions(self, obs_dim):
-        if not hasattr(self, "e"):
-            return np.zeros(obs_dim)  # TODO: silly
+    def get_init_conditions(self):
         return self.e[0]
 
     def get_species_names(self):
         system = create_system_rollout_module(self.grn.config)
         return list(system.grn_step.y_indexes.keys())
 
+    def _map_actions(self, actions: np.ndarray):
+        actions = np.array([a * (r / self.scale_a) for a, r in zip(actions, self.ranges)])
+        return np.insert(actions, self.r, [0.0])
+
     def step(self, action):
-        output = self._step(t=self.t, y=self.x)
+        output = self._step(t=self.t,
+                            y=self.x + self._map_actions(actions=action))
         self.x = output.ys[:, -1]
         self.w = output.ws[:, -1]
         self.c = output.cs[:, -1]

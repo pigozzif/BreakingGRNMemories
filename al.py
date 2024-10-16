@@ -30,7 +30,6 @@ class AssociativeLearning(object):
 
     def __init__(self, seed, model_id, us_scale_up=100.0, r_scale_up=2.0, n_secs=2500, **kwargs):
         self.i = model_id
-        self.idx = 0
         self.random_key = jrandom.PRNGKey(seed)
         self.grn = GeneRegulatoryNetwork.create(biomodel_idx=model_id, **kwargs)
         self.us_scale_up = us_scale_up
@@ -136,7 +135,7 @@ class AssociativeLearning(object):
                 e3 = self.stimulate(e2.ys[:, -1], e2.ws[:, -1], cs_circuit.stimulus, cs_circuit.stimulus_reg)
                 is_mem = self.is_memory(e1, e3, ucs_circuit.response, up_down_r)
                 if is_mem:
-                    self.save_memory(e3)
+                    self.save_memory(e3, r=cs_circuit.response, ucs=ucs_circuit.stimulus, cs=cs_circuit.stimulus)
                 del e2, e3
             del e1
         return is_mem
@@ -165,12 +164,17 @@ class AssociativeLearning(object):
         return np.mean(e2.ys[response, :]) <= mean_relax - (
                 mean_relax - np.mean(e1.ys[response, :])) / 2.0
 
-    def save_memory(self, e3):
-        pickle.dump([e3.ys[:, -1], e3.ws[:, -1], e3.cs[:, -1]], open(os.path.join("memories",
-                                                                                  get_memory_file(biomodel_idx=self.i,
-                                                                                                  circuit_idx=self.idx)),
-                                                                     "wb"))
-        self.idx += 1
+    def save_memory(self, e3, r, ucs, cs):
+        new_bounds = self.bounds.copy()
+        new_bounds[:, 0] *= self.us_scale_up
+        new_bounds[:, 1] /= self.us_scale_up
+        pickle.dump([e3.ys[:, -1], e3.ws[:, -1], e3.cs[:, -1], new_bounds],
+                    open(os.path.join("memories",
+                                      get_memory_file(biomodel_idx=self.i,
+                                                      r=str(r),
+                                                      ucs=str(ucs),
+                                                      cs=str(cs))),
+                         "wb"))
 
 
 def learn(seed, i):
@@ -184,4 +188,4 @@ if __name__ == "__main__":
     # 26, 27, 29, 31
     arguments = parse_args()
     set_seed(arguments.seed)
-    learn(arguments.seed, arguments.task)
+    learn(arguments.seed, arguments.task.split("-")[0])

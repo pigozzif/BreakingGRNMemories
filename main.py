@@ -19,8 +19,14 @@ def get_env(env_name, seed):
         return LotkaVolterraEquation()
     elif env_name == "schrodinger":
         return SchrodingerEquation()
-    elif env_name.isnumeric():
-        return GRNEnv(seed=seed, biomodel_idx=int(env_name), obs_dim=3)
+    elif "-" in env_name and all(map(lambda x: x.isnumeric(), env_name.split("-"))):
+        ids = env_name.split("-")
+        return GRNEnv(seed=seed,
+                      biomodel_idx=int(ids[0]),
+                      obs_dim=3,
+                      r=ids[1],
+                      ucs=ids[2],
+                      cs=ids[3])
     raise ValueError("Invalid env name: {}".format(env_name))
 
 
@@ -32,7 +38,7 @@ def get_algorithm(algorithm, **kwargs):
     raise ValueError("Invalid algorithm name: {}".format(algorithm))
 
 
-def train(seed, task, algorithm, policy, num_steps=int(2e2)):
+def train(seed, task, algorithm, policy, num_steps=int(2e5)):
     file_name = get_file_name(seed=seed, task=task, algorithm=algorithm, policy=policy)
     env = Monitor(env=get_env(env_name=task, seed=seed),
                   filename=os.path.join("output", "monitor.csv"))
