@@ -1,10 +1,13 @@
 import dataclasses
 
+import jax
 import numpy as np
 from addict import Dict
 import os
 import sbmltoodejax
 import jax.random as jrandom
+from autodiscjax import DictTree
+from autodiscjax.modules import grnwrappers
 
 from utils import create_system_rollout_module
 
@@ -28,6 +31,7 @@ class Parameters(object):
 
 
 class GeneRegulatoryNetwork(object):
+    NUM_PULSES = 5
 
     def __init__(self,
                  biomodel_idx,
@@ -80,6 +84,27 @@ class GeneRegulatoryNetwork(object):
     def get_observed_node_ids(self):
         return [create_system_rollout_module(self.config).grn_step.y_indexes[name]
                 for name in self.observed_node_names] if self.observed_node_names is not None else []
+
+    def stimulate(self, key, y0, w0, t0, stimulus, regulation):
+        intervention_params = DictTree()
+        for (s, val), regulation in zip(stimulus.items(), regulation):
+            intervention_params.y[s] = jax.numpy.array([val])  # self.bounds[s, int(regulation) % 2]])
+        intervals = []
+        window = self.config.n_secs // (self.NUM_PULSES * 2)
+        for _ in stimulus:
+            start = t0
+            for pulse in range(self.NUM_PULSES):
+                intervals.append([start, start + window])
+                start += window * 2
+        intervention_fn = grnwrappers.PiecewiseSetConstantIntervention(
+            time_to_interval_fn=grnwrappers.TimeToInterval(
+                intervals=intervals))
+        return self(key=key,
+                    y0=y0,
+                    w0=w0,
+                    t0=t0,
+                    intervention_fn=intervention_fn,
+                    intervention_params=intervention_params)[0]
 
     @classmethod
     def create(cls, biomodel_idx, observed_node_names=None, **kwargs):

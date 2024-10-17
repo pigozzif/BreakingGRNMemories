@@ -2,10 +2,6 @@ import pickle
 from dataclasses import dataclass
 from enum import IntEnum
 
-import jax.numpy as jnp
-from autodiscjax import DictTree
-from autodiscjax.modules import grnwrappers
-
 from grn import *
 from utils import parse_args, set_seed, get_memory_file
 
@@ -54,31 +50,6 @@ class AssociativeLearning(object):
     def relax(self, y0=None, w0=None):
         return self.grn(key=self.random_key, y0=y0, w0=w0)[0]
 
-    def stimulate(self, y0, w0, t0, stimulus, regulation):
-        if not isinstance(stimulus, list):
-            stimulus = [stimulus]
-        if not isinstance(regulation, list):
-            regulation = [regulation]
-        intervention_params = DictTree()
-        for s, regulation in zip(stimulus, regulation):
-            intervention_params.y[s] = jnp.array([self.bounds[s, int(regulation) % 2]])
-        intervals = []
-        window = self.grn.config.n_secs // (self.NUM_PULSES * 2)
-        for _ in stimulus:
-            start = t0
-            for pulse in range(self.NUM_PULSES):
-                intervals.append([start, start + window])
-                start += window * 2
-        intervention_fn = grnwrappers.PiecewiseSetConstantIntervention(
-            time_to_interval_fn=grnwrappers.TimeToInterval(
-                intervals=intervals))
-        return self.grn(key=self.random_key,
-                        y0=y0,
-                        w0=w0,
-                        t0=t0,
-                        intervention_fn=intervention_fn,
-                        intervention_params=intervention_params)[0]
-
     def pretest(self):
         curr_circuits = []
         for response in range(len(self.relax_y)):
@@ -91,11 +62,12 @@ class AssociativeLearning(object):
             curr_circuits.clear()
 
     def pretest_for_r(self, response, stimulus, regulation):
-        x2 = self.stimulate(y0=self.genes_ss,
-                            w0=self.w_ss,
-                            t0=2500,
-                            stimulus=stimulus,
-                            regulation=regulation)
+        x2 = self.grn.stimulate(key=self.random_key,
+                                y0=self.genes_ss,
+                                w0=self.w_ss,
+                                t0=2500,
+                                stimulus={stimulus: self.bounds[stimulus, int(regulation) % 2]},
+                                regulation=[regulation])
         if np.mean(x2.ys[response, :]) >= self.r_scale_up * np.mean(self.relax_y[response, :]) and np.mean(
                 x2.ys[response, :]) >= self.r_scale_up * np.mean(
             self.reference.ys[response, self.relax_t:self.relax_t * 2]):
@@ -132,23 +104,31 @@ class AssociativeLearning(object):
         for cs_circuit in cs_list:
             if ucs_circuit.stimulus == cs_circuit.stimulus:
                 continue
-            e1 = self.stimulate(y0=self.genes_ss,
-                                w0=self.w_ss,
-                                t0=self.n_secs,
-                                stimulus=[ucs_circuit.stimulus, cs_circuit.stimulus],
-                                regulation=[ucs_circuit.stimulus_reg, cs_circuit.stimulus_reg])
+            e1 = self.grn.stimulate(key=self.random_key,
+                                    y0=self.genes_ss,
+                                    w0=self.w_ss,
+                                    t0=self.n_secs,
+                                    stimulus={ucs_circuit.stimulus:
+                                                  self.bounds[ucs_circuit.stimulus, int(ucs_circuit.stimulus_reg) % 2],
+                                              cs_circuit.stimulus:
+                                                  self.bounds[cs_circuit.stimulus, int(cs_circuit.stimulus_reg) % 2]},
+                                    regulation=[ucs_circuit.stimulus_reg, cs_circuit.stimulus_reg])
             up_down_r = self.is_r_regulated(e1, cs_circuit.response)
             if int(up_down_r) != 0:
-                e2 = self.stimulate(y0=e1.ys[:, -1],
-                                    w0=e1.ws[:, -1],
-                                    t0=self.n_secs * 2,
-                                    stimulus=[],
-                                    regulation=[])
-                e3 = self.stimulate(y0=e2.ys[:, -1],
-                                    w0=e2.ws[:, -1],
-                                    t0=self.n_secs * 3,
-                                    stimulus=cs_circuit.stimulus,
-                                    regulation=cs_circuit.stimulus_reg)
+                e2 = self.grn.stimulate(key=self.random_key,
+                                        y0=e1.ys[:, -1],
+                                        w0=e1.ws[:, -1],
+                                        t0=self.n_secs * 2,
+                                        stimulus={},
+                                        regulation=[])
+                e3 = self.grn.stimulate(key=self.random_key,
+                                        y0=e2.ys[:, -1],
+                                        w0=e2.ws[:, -1],
+                                        t0=self.n_secs * 3,
+                                        stimulus={cs_circuit.stimulus:
+                                                      self.bounds[
+                                                          cs_circuit.stimulus, int(cs_circuit.stimulus_reg) % 2]},
+                                        regulation=[cs_circuit.stimulus_reg])
                 is_mem = self.is_memory(e1, e3, ucs_circuit.response, up_down_r)
                 if is_mem:
                     self.save_memory(e3,
