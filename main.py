@@ -38,7 +38,7 @@ def get_algorithm(algorithm, **kwargs):
     raise ValueError("Invalid algorithm name: {}".format(algorithm))
 
 
-def train(seed, task, algorithm, policy, num_steps=int(2e5)):
+def train(seed, task, algorithm, policy, num_steps=int(1e2)):
     file_name = get_file_name(seed=seed, task=task, algorithm=algorithm, policy=policy)
     env = Monitor(env=get_env(env_name=task, seed=seed),
                   filename=os.path.join("output", "monitor.csv"))
@@ -54,21 +54,24 @@ def evaluate(model):
     return mean_reward, std_reward
 
 
-def save_rendering(model, file_name, num_steps=2500):
+def save_rendering(model, file_name, num_steps=1):
     vec_env = model.get_env()
     obs = vec_env.reset()
     data = np.zeros((num_steps, vec_env.observation_space.shape[0]))
     actions = np.zeros((num_steps, vec_env.action_space.shape[0]))
+    lstm_states = None
+    episode_starts = np.ones((1,), dtype=bool)
+    env = vec_env.envs[0].env
     fig, axes = plt.subplots(figsize=(8, 10), nrows=2, ncols=1)
     for i in range(num_steps):
-        action, _states = model.predict(obs, deterministic=True)
+        action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_starts, deterministic=True)
         obs, rewards, dones, info = vec_env.step(action)
-        # vec_env.render("human")
+        episode_starts = dones
         data[i] = np.array(obs)
-        actions[i] = np.array(action)
-    axes[0].plot(data, label=vec_env.envs[0].env.get_species_names())
+        actions[i] = np.delete(env._map_actions(actions=action), env.r)
+    axes[0].plot(data, label=env.get_species_names())
     axes[0].set_title("species", fontsize=15)
-    axes[1].plot(actions, label=vec_env.envs[0].env.get_species_names())
+    axes[1].plot(actions, label=env.get_action_names())
     axes[1].set_title("actions", fontsize=15)
     for ax in axes:
         ax.set_xlabel("sim. time [s]", fontsize=10)
