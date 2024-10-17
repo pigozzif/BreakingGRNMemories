@@ -30,6 +30,7 @@ class Parameters(object):
 class GeneRegulatoryNetwork(object):
 
     def __init__(self,
+                 biomodel_idx,
                  observed_node_names,
                  model_filepath,
                  system_type="grn",
@@ -37,7 +38,8 @@ class GeneRegulatoryNetwork(object):
                  rtol=1e-12,
                  mxstep=50000,
                  deltaT=0.01,
-                 n_secs=1):
+                 n_secs=2500):
+        self.biomodel_idx = biomodel_idx
         self.config = Dict()
         self.config.system_type = system_type
         self.config.model_filepath = model_filepath  # path of model class that we just created
@@ -55,6 +57,7 @@ class GeneRegulatoryNetwork(object):
                  y0=None,
                  w0=None,
                  c=None,
+                 t0=None,
                  intervention_fn=None,
                  intervention_params=None,
                  perturbation_fn=None,
@@ -66,7 +69,7 @@ class GeneRegulatoryNetwork(object):
             w0 = np.array(self.params.w0)
         if c is None and self.params.c:
             c = np.array(self.params.c)
-        system = create_system_rollout_module(self.config, y0=y0, w0=w0, c=c)
+        system = create_system_rollout_module(self.config, y0=y0, w0=w0, c=c, t0=t0)
         return system(skey, intervention_fn, intervention_params, perturbation_fn, perturbation_params)
 
     def set_time(self, n_secs):
@@ -91,7 +94,8 @@ class GeneRegulatoryNetwork(object):
         if not os.path.exists(out_model_jax_filepath):
             model_data = sbmltoodejax.parse.ParseSBMLFile(out_model_sbml_filepath)
             sbmltoodejax.modulegeneration.GenerateModel(model_data, out_model_jax_filepath)
-        grn = GeneRegulatoryNetwork(observed_node_names=observed_node_names,
+        grn = GeneRegulatoryNetwork(biomodel_idx=biomodel_idx,
+                                    observed_node_names=observed_node_names,
                                     model_filepath=out_model_jax_filepath,
                                     **kwargs)
         return grn

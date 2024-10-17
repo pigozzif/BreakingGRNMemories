@@ -1,14 +1,12 @@
 import abc
 import os
 import pickle
-from typing import Iterable
 
 import gymnasium
 import jax
 import numpy as np
 import scipy.integrate
 from gymnasium.spaces import Box
-from matplotlib import pyplot as plt
 
 from grn import GeneRegulatoryNetwork
 from utils import create_system_rollout_module, get_memory_file
@@ -158,10 +156,10 @@ class SchrodingerEquation(EquationEnv):
 
 class GRNEnv(EquationEnv):
 
-    def __init__(self, seed, obs_dim, biomodel_idx, r, ucs, cs, scale_a=10.0):
+    def __init__(self, seed, obs_dim, grn, r, ucs, cs, scale_a=1.0):
         super().__init__(obs_dim, 1.0)
-        self.grn = GeneRegulatoryNetwork.create(biomodel_idx=biomodel_idx)
-        self.e = pickle.load(open(os.path.join("memories", get_memory_file(biomodel_idx=biomodel_idx,
+        self.grn = grn
+        self.e = pickle.load(open(os.path.join("memories", get_memory_file(biomodel_idx=grn.biomodel_idx,
                                                                            r=r,
                                                                            ucs=ucs,
                                                                            cs=cs)), "rb"))
@@ -170,17 +168,23 @@ class GRNEnv(EquationEnv):
         self.w = self.e[1]
         self.c = self.e[2]
         self.r = int(r)
+        self.s = int(cs)
         self.ranges = [abs(self.e[3][i][1] - self.e[3][i][0]) for i in range(self.obs_dim)]
         self.ranges.pop(self.r)
+        self.mean_relax = self.e[4]
+        self.response_reg = self.e[5]
+        self.r_scale = self.e[6]
         self.key = jax.random.PRNGKey(seed)
         self.action_space = Box(low=-1.0, high=1.0, shape=(self.obs_dim - 1,))
         self.scale_a = scale_a
+        self.obs = None
 
     def _step(self, t, y):
         return self.grn(key=self.key,
                         y0=y,
                         w0=self.w,
-                        c=self.c)[0]
+                        c=self.c,
+                        t0=t)[0]
 
     def get_init_conditions(self):
         return self.e[0]
@@ -189,22 +193,38 @@ class GRNEnv(EquationEnv):
         system = create_system_rollout_module(self.grn.config)
         return list(system.grn_step.y_indexes.keys())
 
+    def get_action_names(self):
+        species = self.get_species_names()
+        return species.remove(species[self.r])
+
     def _map_actions(self, actions: np.ndarray):
         actions = np.array([a * (r / self.scale_a) for a, r in zip(actions, self.ranges)])
         return np.insert(actions, self.r, [0.0])
 
+    def _get_reward(self, output):
+        if self.response_reg == 1:
+            return self.r_scale * self.mean_relax - np.mean(output.ys[self.r, :])
+        return np.mean(output.ys[self.r, :]) - self.mean_relax / self.r_scale
+
     def step(self, action):
+        action = np.zeros(self.obs_dim)
         output = self._step(t=self.t,
-                            y=self.x + self._map_actions(actions=action))
+                            y=np.clip(self.x + self._map_actions(actions=action), a_min=0.0, a_max=float("inf")))
         self.x = output.ys[:, -1]
         self.w = output.ws[:, -1]
         self.c = output.cs[:, -1]
-        obs = np.mean(output.ys, axis=1)
+        self.obs = output.ys  # np.mean(output.ys, axis=1)
+        reward = self._get_reward(output=output)
+        self.t += output.ys.shape[1] * self.dt
         del output
-        return obs, 0.0, False, False, {}
+        return self.obs, reward, self.t >= 12500, np.any(np.isnan(self.obs)), self._get_info()
+
+    def _get_info(self):
+        return {"full_obs": self.obs}
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed, options=options)
+        self.t = 10000
         self.w = self.e[1]
         self.c = self.e[2]
-        return self.x, {}
+        return self.x, self._get_info()

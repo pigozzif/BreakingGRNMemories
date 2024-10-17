@@ -10,7 +10,7 @@ from autodiscjax.modules.grnwrappers import GRNRollout
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--task", type=str, default="27-0-2-1")
+    parser.add_argument("--task", type=str, default="39-0-2-4")
     parser.add_argument("--algorithm", type=str, default="rppo")
     parser.add_argument("--policy", type=str, default="MlpLstmPolicy")
     parser.add_argument("--render", type=bool, default=True)
@@ -31,7 +31,7 @@ def get_memory_file(biomodel_idx, r, ucs, cs):
     return ".".join([str(biomodel_idx), str(r), str(ucs), str(cs), "pickle"])
 
 
-def create_system_rollout_module(system_rollout_config, y0=None, w0=None, c=None):
+def create_system_rollout_module(system_rollout_config, y0=None, w0=None, c=None, t0=None):
     if system_rollout_config.system_type == "grn":
         spec = importlib.util.spec_from_file_location("JaxBioModelSpec", system_rollout_config.model_filepath)
         module = importlib.util.module_from_spec(spec)
@@ -46,7 +46,8 @@ def create_system_rollout_module(system_rollout_config, y0=None, w0=None, c=None
             w0 = getattr(module, "w0")
         if c is None:
             c = getattr(module, "c")
-        t0 = getattr(module, "t0")
+        if t0 is None:
+            t0 = getattr(module, "t0")
         system_rollout = GRNRollout(n_steps=system_rollout_config.n_system_steps, y0=y0, w0=w0, c=c, t0=t0,
                                     deltaT=system_rollout_config.deltaT, grn_step=grnstep)
     else:
