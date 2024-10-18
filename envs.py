@@ -183,7 +183,7 @@ class GRNEnv(EquationEnv):
     def _build_action_map(self):
         m = {}
         i = 0
-        for sp in range(len(self.ranges)):
+        for sp in range(len(self.get_species_names())):
             if sp != self.r and sp != self.s:
                 m[i] = sp
                 i += 1
@@ -236,8 +236,17 @@ class GRNEnv(EquationEnv):
         del output
         return self.obs, reward, self.t >= 12500, np.any(np.isnan(self.obs)), self._get_info()
 
+    def _is_not_memory(self, e, response, response_reg):
+        if e is None:
+            return False
+        elif response_reg == 1:
+            return np.mean(e[response, :]) < self.r_scale * self.mean_relax
+        return np.mean(e[response, :]) > self.mean_relax / self.r_scale
+
     def _get_info(self):
-        return {"full_obs": self.obs}
+        return {"full_obs": self.obs, "is_broken": self._is_not_memory(e=self.obs,
+                                                                       response=self.r,
+                                                                       response_reg=self.response_reg)}
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed, options=options)

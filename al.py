@@ -129,7 +129,7 @@ class AssociativeLearning(object):
                                                       self.bounds[
                                                           cs_circuit.stimulus, int(cs_circuit.stimulus_reg) % 2]},
                                         regulation=[cs_circuit.stimulus_reg])
-                is_mem = self.is_memory(e1, e3, ucs_circuit.response, up_down_r)
+                is_mem = self.is_memory(e3, ucs_circuit.response, up_down_r)
                 if is_mem:
                     self.save_memory(e3,
                                      r=cs_circuit.response,
@@ -157,7 +157,7 @@ class AssociativeLearning(object):
             return Regulation(2)
         return Regulation(0)
 
-    def is_memory(self, e1, e2, response, response_reg):
+    def is_memory(self, e2, response, response_reg):
         mean_relax = np.mean(self.relax_y[response, :])
         if response_reg == 1:
             return np.mean(e2.ys[response, :]) >= self.r_scale_up * mean_relax
