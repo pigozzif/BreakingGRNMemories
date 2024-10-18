@@ -88,7 +88,7 @@ class GeneRegulatoryNetwork(object):
     def stimulate(self, key, y0, w0, t0, stimulus, regulation):
         intervention_params = DictTree()
         for (s, val), regulation in zip(stimulus.items(), regulation):
-            intervention_params.y[s] = jax.numpy.array([val])  # self.bounds[s, int(regulation) % 2]])
+            intervention_params.y[s] = jax.numpy.array([val])
         intervals = []
         window = self.config.n_secs // (self.NUM_PULSES * 2)
         for _ in stimulus:

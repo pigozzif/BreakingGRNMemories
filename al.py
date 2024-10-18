@@ -135,7 +135,8 @@ class AssociativeLearning(object):
                                      r=cs_circuit.response,
                                      ucs=ucs_circuit.stimulus,
                                      cs=cs_circuit.stimulus,
-                                     response_reg=up_down_r)
+                                     response_reg=up_down_r,
+                                     stimulus_reg=cs_circuit.stimulus_reg)
                 del e2, e3
             del e1
         return is_mem
@@ -162,16 +163,17 @@ class AssociativeLearning(object):
             return np.mean(e2.ys[response, :]) >= self.r_scale_up * mean_relax
         return np.mean(e2.ys[response, :]) <= mean_relax / self.r_scale_up
 
-    def save_memory(self, e3, r, ucs, cs, response_reg):
+    def save_memory(self, e3, r, ucs, cs, response_reg, stimulus_reg):
         new_bounds = self.bounds.copy()
-        new_bounds[:, 0] *= self.us_scale_up
-        new_bounds[:, 1] /= self.us_scale_up
+        # new_bounds[:, 0] *= self.us_scale_up
+        # new_bounds[:, 1] /= self.us_scale_up
         pickle.dump([e3.ys[:, -1],
                      e3.ws[:, -1],
                      e3.cs[:, -1],
                      new_bounds,
                      np.mean(self.relax_y[r, :]),
                      int(response_reg),
+                     int(stimulus_reg),
                      self.r_scale_up],
                     open(os.path.join("memories",
                                       get_memory_file(biomodel_idx=self.i,

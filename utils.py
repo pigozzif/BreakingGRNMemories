@@ -53,3 +53,13 @@ def create_system_rollout_module(system_rollout_config, y0=None, w0=None, c=None
     else:
         raise ValueError
     return system_rollout
+
+
+def discrete2continuous(action, env, num_steps):
+    control = np.zeros((num_steps, len(env.get_action_names())))
+    start = 0
+    window = (env.grn.config.n_secs // (env.grn.NUM_PULSES * 2)) * int(1 / env.dt)
+    for pulse in range(env.grn.NUM_PULSES):
+        control[start: start + window, action // 2] = -1.0 if action % 2 else 1.0
+        start += window * 2
+    return control

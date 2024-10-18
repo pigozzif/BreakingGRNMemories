@@ -1,5 +1,6 @@
 import os
 
+import gymnasium.spaces
 import numpy as np
 from matplotlib import pyplot as plt
 from sb3_contrib import RecurrentPPO
@@ -10,7 +11,7 @@ from stable_baselines3.common.monitor import Monitor
 from envs import MotionEquation, GRNEnv, LotkaVolterraEquation, SchrodingerEquation
 from grn import GeneRegulatoryNetwork
 from plotting import plot_reward
-from utils import parse_args, set_seed, get_file_name, create_system_rollout_module
+from utils import parse_args, set_seed, get_file_name, create_system_rollout_module, discrete2continuous
 
 
 def get_env(env_name, seed):
@@ -40,7 +41,7 @@ def get_algorithm(algorithm, **kwargs):
     raise ValueError("Invalid algorithm name: {}".format(algorithm))
 
 
-def train(seed, task, algorithm, policy, num_steps=int(1e2)):
+def train(seed, task, algorithm, policy, num_steps=int(5e3)):
     file_name = get_file_name(seed=seed, task=task, algorithm=algorithm, policy=policy)
     env = Monitor(env=get_env(env_name=task, seed=seed),
                   filename=os.path.join("output", "monitor.csv"))
@@ -61,8 +62,8 @@ def evaluate(model):
 def save_rendering(model, file_name, num_steps=1):
     vec_env = model.get_env()
     obs = vec_env.reset()
-    data = []  # np.zeros((num_steps, vec_env.observation_space.shape[0]))
-    actions = np.zeros((num_steps, vec_env.action_space.shape[0]))
+    data = []
+    actions = []
     lstm_states = None
     episode_starts = np.ones((1,), dtype=bool)
     env = vec_env.envs[0].env
@@ -70,12 +71,17 @@ def save_rendering(model, file_name, num_steps=1):
     for i in range(num_steps):
         action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_starts, deterministic=True)
         obs, rewards, dones, info = vec_env.step(action)
+        print(rewards)
         episode_starts = dones
         data.append(info[0]["full_obs"])
-        actions[i] = np.delete(env._map_actions(actions=action), env.r)
+        if isinstance(env.action_space, gymnasium.spaces.Discrete):
+            action = discrete2continuous(action=action,
+                                         env=env,
+                                         num_steps=info[0]["full_obs"].shape[1])
+        actions.append(action)
     axes[0].plot(np.hstack(data).T, label=env.get_species_names())
     axes[0].set_title("species", fontsize=15)
-    axes[1].plot(actions, label=env.get_action_names())
+    axes[1].plot(np.hstack(actions), label=env.get_action_names())
     axes[1].set_title("actions", fontsize=15)
     for ax in axes:
         ax.set_xlabel("sim. time [s]", fontsize=10)
