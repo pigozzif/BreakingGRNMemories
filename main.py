@@ -8,6 +8,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 
+from algorithms import ExhaustiveSolver
 from envs import MotionEquation, GRNEnv, LotkaVolterraEquation, SchrodingerEquation
 from grn import GeneRegulatoryNetwork
 from plotting import plot_reward
@@ -38,13 +39,16 @@ def get_algorithm(algorithm, **kwargs):
         return PPO(**kwargs)
     elif algorithm == "rppo":
         return RecurrentPPO(**kwargs)
+    elif algorithm == "exhaustive-single":
+        return ExhaustiveSolver(env=kwargs["env"], seed=kwargs["seed"])
     raise ValueError("Invalid algorithm name: {}".format(algorithm))
 
 
 def train(seed, task, algorithm, policy, num_steps=int(5e3)):
     file_name = get_file_name(seed=seed, task=task, algorithm=algorithm, policy=policy)
     env = Monitor(env=get_env(env_name=task, seed=seed),
-                  filename=os.path.join("output", "monitor.csv"))
+                  filename=os.path.join("output", "monitor.csv"),
+                  info_keywords=("is_broken",))
     model = get_algorithm(algorithm=algorithm, seed=seed, policy=policy, env=env, verbose=1)
     # model.load(os.path.join("models", file_name))
     # return model
@@ -71,7 +75,6 @@ def save_rendering(model, file_name, num_steps=1):
     for i in range(num_steps):
         action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_starts, deterministic=True)
         obs, rewards, dones, info = vec_env.step(action)
-        print(rewards)
         episode_starts = dones
         data.append(info[0]["full_obs"])
         if isinstance(env.action_space, gymnasium.spaces.Discrete):
