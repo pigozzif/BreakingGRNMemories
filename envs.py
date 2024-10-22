@@ -6,7 +6,7 @@ import gymnasium
 import jax
 import numpy as np
 import scipy.integrate
-from gymnasium.spaces import Box, Discrete
+from gymnasium.spaces import Box
 
 from utils import create_system_rollout_module, get_memory_file
 
@@ -175,7 +175,7 @@ class GRNEnv(EquationEnv):
         self.stimulus_reg = self.mem_data[6]  # TODO: dataclass for all this stuff
         self.r_scale = self.mem_data[7]
         self.key = jax.random.PRNGKey(seed)
-        self.action_space = Discrete(n=(obs_dim - 2) * 2, seed=seed)
+        self.action_space = Box(low=-1.0, high=1.0, shape=(self.obs_dim - 2,), seed=seed)
         self.scale_a = scale_a
         self.obs = None
         self.action_map = self._build_action_map()
@@ -189,15 +189,19 @@ class GRNEnv(EquationEnv):
                 i += 1
         return m
 
-    def _step(self, t, y, action):
-        control = self.action_map[action // 2]
+    def _step(self, t, y, actions):
+        stimuli = {self.s: self.mem_data[3][self.s][self.stimulus_reg % 2]}
+        regulation = [self.stimulus_reg]
+        for action in actions:
+            control = self.action_map[action // 2]
+            stimuli[control] = self.mem_data[3][control][action % 2]
+            regulation.append(action % 2)
         return self.grn.stimulate(key=self.key,
                                   y0=y,
                                   w0=self.w,
                                   t0=t,
-                                  stimulus={self.s: self.mem_data[3][self.s][self.stimulus_reg % 2],
-                                            control: self.mem_data[3][control][action % 2]},
-                                  regulation=[self.stimulus_reg, action % 2])
+                                  stimulus=stimuli,
+                                  regulation=regulation)
 
     def get_init_conditions(self):
         return self.mem_data[0]
@@ -224,9 +228,11 @@ class GRNEnv(EquationEnv):
 
     def step(self, action):
         # action = np.zeros(self.obs_dim)
+        if not isinstance(action, list):
+            action = [action]
         output = self._step(t=self.t,
                             y=self.x,
-                            action=action)
+                            actions=action)
         self.x = output.ys[:, -1]
         self.w = output.ws[:, -1]
         self.c = output.cs[:, -1]

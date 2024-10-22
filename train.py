@@ -8,7 +8,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 
-from algorithms import ExhaustiveSolver
+from algorithms import SingleExhaustiveSolver, MultipleExhaustiveSolver
 from envs import MotionEquation, GRNEnv, LotkaVolterraEquation, SchrodingerEquation
 from grn import GeneRegulatoryNetwork
 from plotting import plot_reward
@@ -40,7 +40,9 @@ def get_algorithm(algorithm, **kwargs):
     elif algorithm == "rppo":
         return RecurrentPPO(**kwargs)
     elif algorithm == "exhaustive-single":
-        return ExhaustiveSolver(env=kwargs["env"], seed=kwargs["seed"])
+        return SingleExhaustiveSolver(env=kwargs["env"], seed=kwargs["seed"])
+    elif algorithm == "exhaustive-multiple":
+        return MultipleExhaustiveSolver(env=kwargs["env"], seed=kwargs["seed"])
     raise ValueError("Invalid algorithm name: {}".format(algorithm))
 
 
