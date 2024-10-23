@@ -8,7 +8,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 
-from algorithms import SingleExhaustiveSolver, MultipleExhaustiveSolver, GeneticAlgorithmCombinatorics
+from algorithms import SingleExhaustiveSolver, GeneticAlgorithmCombinatorics
 from envs import MotionEquation, GRNEnv, LotkaVolterraEquation, SchrodingerEquation
 from grn import GeneRegulatoryNetwork
 from plotting import plot_reward
