@@ -10,8 +10,8 @@ from autodiscjax.modules.grnwrappers import GRNRollout
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--task", type=str, default="16-1-0-2")
-    parser.add_argument("--algorithm", type=str, default="exhaustive-multiple")
+    parser.add_argument("--task", type=str, default="10-0-1-7")
+    parser.add_argument("--algorithm", type=str, default="ga")
     parser.add_argument("--policy", type=str, default="MlpLstmPolicy")
     parser.add_argument("--render", type=bool, default=False)
     return parser.parse_args()

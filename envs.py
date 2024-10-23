@@ -228,8 +228,8 @@ class GRNEnv(EquationEnv):
 
     def step(self, action):
         # action = np.zeros(self.obs_dim)
-        if not isinstance(action, list):
-            action = [action]
+        if not isinstance(action, tuple):
+            action = (action)
         output = self._step(t=self.t,
                             y=self.x,
                             actions=action)
