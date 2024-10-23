@@ -49,14 +49,14 @@ def get_algorithm(algorithm, **kwargs):
 def train(seed, task, algorithm, policy, num_steps=int(5e3)):
     file_name = get_file_name(seed=seed, task=task, algorithm=algorithm, policy=policy)
     env = Monitor(env=get_env(env_name=task, seed=seed),
-                  filename=os.path.join("output", "monitor.csv"),
+                  filename=os.path.join("output", file_name + ".csv"),
                   info_keywords=("is_broken",))
     model = get_algorithm(algorithm=algorithm, seed=seed, policy=policy, env=env, verbose=1)
     # model.load(os.path.join("models", file_name))
     # return model
     model.learn(total_timesteps=num_steps, progress_bar=True)
     model.save(os.path.join("models", file_name))
-    os.rename(os.path.join("output", "monitor.csv"), os.path.join("output", file_name + ".csv"))
+    os.rename(os.path.join("output", file_name + ".csv.monitor.csv"), os.path.join("output", file_name + ".csv"))
     return model
 
 
