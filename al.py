@@ -164,7 +164,7 @@ class AssociativeLearning(object):
         return np.mean(e2.ys[response, :]) <= mean_relax / self.r_scale_up
 
     def save_memory(self, e3, r, ucs, cs, response_reg, stimulus_reg):
-        new_bounds = self.bounds.copy()
+        # new_bounds = self.bounds.copy()
         # new_bounds[:, 0] *= self.us_scale_up
         # new_bounds[:, 1] /= self.us_scale_up
         idx = max([int(file.split(".")[2]) for file in os.listdir("memories")
@@ -172,7 +172,7 @@ class AssociativeLearning(object):
         pickle.dump([e3.ys[:, -1],
                      e3.ws[:, -1],
                      e3.cs[:, -1],
-                     new_bounds,
+                     self.bounds,
                      np.mean(self.relax_y[r, :]),
                      int(response_reg),
                      int(stimulus_reg),

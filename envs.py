@@ -166,7 +166,7 @@ class GRNEnv(EquationEnv):
         self.w = self.mem_data[1]
         self.c = self.mem_data[2]
         self.r = int(r)
-        self.s = self.mem_data[9]
+        self.s = self.mem_data[10]
         self.ranges = [abs(self.mem_data[3][i][1] - self.mem_data[3][i][0]) for i in range(self.obs_dim)]
         self.ranges.pop(self.r)
         self.mean_relax = self.mem_data[4]
@@ -228,7 +228,7 @@ class GRNEnv(EquationEnv):
     def step(self, action):
         # action = np.zeros(self.obs_dim)
         if not isinstance(action, np.ndarray):
-            action = np.array(action)
+            action = np.array([action])
         output = self._step(t=self.t,
                             y=self.x,
                             actions=action)

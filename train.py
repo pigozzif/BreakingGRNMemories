@@ -105,8 +105,8 @@ if __name__ == "__main__":
                                         task=args.task,
                                         algorithm=args.algorithm,
                                         policy=args.policy))
-    if args.render:
-        save_rendering(model=agent, file_name=".".join([get_file_name(seed=args.seed,
-                                                                      task=args.task,
-                                                                      algorithm=args.algorithm,
-                                                                      policy=args.policy), "png"]))
+    # if args.render:
+    #     save_rendering(model=agent, file_name=".".join([get_file_name(seed=args.seed,
+    #                                                                   task=args.task,
+    #                                                                   algorithm=args.algorithm,
+    #                                                                   policy=args.policy), "png"]))
