@@ -1,9 +1,16 @@
+import os
 import pickle
 from dataclasses import dataclass
 from enum import IntEnum
 
+# import numpy as np
+# from sklearn.preprocessing import StandardScaler
+# from scipy.stats import pearsonr, spearmanr, kendalltau
+
 from grn import *
-from utils import parse_args, set_seed, get_memory_file
+# from information import mutual_information_matrix, minimum_information_bipartition, local_phi_id, \
+#     global_signal_regression, remove_autocorrelation, corrected_zscore
+from utils import parse_args, set_seed
 
 
 class Regulation(IntEnum):
@@ -91,13 +98,11 @@ class AssociativeLearning(object):
                              is_ucs=False)
 
     def eval_mem_for_r(self, response):
-        us, pairing, transfer, associative, consolidation = [], [], [], [], []
         if not self.mem_circuits[response]:
-            return us, pairing, transfer, associative, consolidation
+            return
         cs_list = [circuit for circuit in self.mem_circuits[response] if not circuit.is_ucs]
         for ucs_circuit in [circuit for circuit in self.mem_circuits[response] if circuit.is_ucs]:
             self.test_associative_memory(ucs_circuit, cs_list)
-        return us, pairing, transfer, associative, consolidation
 
     def test_associative_memory(self, ucs_circuit, cs_list):
         is_mem = False
@@ -131,6 +136,28 @@ class AssociativeLearning(object):
                                         regulation=[cs_circuit.stimulus_reg])
                 is_mem = self.is_memory(e3, ucs_circuit.response, up_down_r)
                 if is_mem:
+                    # try:
+                    #     with open("activity.txt", "a") as file:
+                    #         info = self.compute_circuit_info(data=np.nan_to_num(e3.ys))["emergence"]
+                    #         info = np.nan_to_num(info,
+                    #                              neginf=np.nanmin(info[info != -np.inf]),
+                    #                              posinf=np.nanmax(info[info != np.inf]))
+                    #         traj = np.diff(StandardScaler().fit_transform(e3.ys))
+                    #         traj = np.nan_to_num(traj,
+                    #                              neginf=np.nanmin(traj[traj != -np.inf]),
+                    #                              posinf=np.nanmax(traj[traj != np.inf]))
+                    #         traj = np.mean(traj, axis=0)[-len(info):]
+                    #         file.write(";".join([str(self.i),
+                    #                              str(cs_circuit.response),
+                    #                              str(max([int(file.split(".")[2]) for file in os.listdir("memories")
+                    #                                       if file.startswith(
+                    #                                      ".".join([str(self.i), str(cs_circuit.response), ""]))] + [0])
+                    #                                  + 1),
+                    #                              str(pearsonr(info, traj).statistic),
+                    #                              str(spearmanr(info, traj).statistic),
+                    #                              str(kendalltau(info, traj).statistic)]) + "\n")
+                    # except:
+                    #     pass
                     self.save_memory(e3,
                                      r=cs_circuit.response,
                                      ucs=ucs_circuit.stimulus,
@@ -140,6 +167,24 @@ class AssociativeLearning(object):
                 del e2, e3
             del e1
         return is_mem
+
+    # def compute_circuit_info(self, data):
+    #     data = corrected_zscore(np.array(data), axis=1)
+    #     data = global_signal_regression(data)
+    #     data = remove_autocorrelation(data)
+    #     data = data.astype(np.float64, copy=False)
+    #     info = {}
+    #     mi_mat = mutual_information_matrix(data, alpha=1, bonferonni=False, lag=1)
+    #     mib = minimum_information_bipartition(mi_mat, noise=True)
+    #     component_1 = data[mib[0], :].mean(axis=0)
+    #     component_2 = data[mib[1], :].mean(axis=0)
+    #     data_reduced = np.vstack((component_1, component_2))
+    #     phi_results = local_phi_id(0, 1, data_reduced)
+    #     info["synergy"] = phi_results.nodes[(((0, 1),), ((0, 1),))]["pi"]
+    #    info["causation"] = phi_results.nodes[(((0, 1),), ((0,),))]["pi"] + phi_results.nodes[(((0, 1),), ((1,),))][
+    #         "pi"]
+    #     info["emergence"] = np.nansum([info["synergy"], info["causation"]], axis=0)
+    #     return info
 
     def is_r_regulated(self, e1, response):
         return self.is_r_regulated_gen(x1=self.relax_y[response, :],
@@ -167,6 +212,8 @@ class AssociativeLearning(object):
         new_bounds = self.bounds.copy()
         # new_bounds[:, 0] *= self.us_scale_up
         # new_bounds[:, 1] /= self.us_scale_up
+        idx = max([int(file.split(".")[2]) for file in os.listdir("memories")
+                   if file.startswith(".".join([str(self.i), str(r), ""]))] + [0]) + 1
         pickle.dump([e3.ys[:, -1],
                      e3.ws[:, -1],
                      e3.cs[:, -1],
@@ -174,12 +221,15 @@ class AssociativeLearning(object):
                      np.mean(self.relax_y[r, :]),
                      int(response_reg),
                      int(stimulus_reg),
-                     self.r_scale_up],
+                     self.r_scale_up,
+                     r,
+                     ucs,
+                     cs],
                     open(os.path.join("memories",
-                                      get_memory_file(biomodel_idx=self.i,
-                                                      r=str(r),
-                                                      ucs=str(ucs),
-                                                      cs=str(cs))),
+                                      ".".join([str(self.i),
+                                                str(r),
+                                                str(idx),
+                                                "pickle"])),
                          "wb"))
 
 

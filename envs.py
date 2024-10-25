@@ -155,19 +155,18 @@ class SchrodingerEquation(EquationEnv):
 
 class GRNEnv(EquationEnv):
 
-    def __init__(self, seed, obs_dim, grn, r, ucs, cs, scale_a=1.0):
+    def __init__(self, seed, obs_dim, grn, r, idx, scale_a=1.0):
         super().__init__(obs_dim, 1.0)
         self.grn = grn
         self.mem_data = pickle.load(open(os.path.join("memories", get_memory_file(biomodel_idx=grn.biomodel_idx,
                                                                                   r=r,
-                                                                                  ucs=ucs,
-                                                                                  cs=cs)), "rb"))
+                                                                                  idx=idx)), "rb"))
 
         self.x = self.get_init_conditions()
         self.w = self.mem_data[1]
         self.c = self.mem_data[2]
         self.r = int(r)
-        self.s = int(cs)
+        self.s = self.mem_data[9]
         self.ranges = [abs(self.mem_data[3][i][1] - self.mem_data[3][i][0]) for i in range(self.obs_dim)]
         self.ranges.pop(self.r)
         self.mean_relax = self.mem_data[4]
@@ -228,8 +227,8 @@ class GRNEnv(EquationEnv):
 
     def step(self, action):
         # action = np.zeros(self.obs_dim)
-        if not isinstance(action, tuple):
-            action = (action)
+        if not isinstance(action, np.ndarray):
+            action = np.array(action)
         output = self._step(t=self.t,
                             y=self.x,
                             actions=action)

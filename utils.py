@@ -10,8 +10,8 @@ from autodiscjax.modules.grnwrappers import GRNRollout
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--task", type=str, default="10-0-1-7")
-    parser.add_argument("--algorithm", type=str, default="ga")
+    parser.add_argument("--task", type=str, default="3-0-1")
+    parser.add_argument("--algorithm", type=str, default="single")
     parser.add_argument("--policy", type=str, default="MlpLstmPolicy")
     parser.add_argument("--render", type=bool, default=False)
     return parser.parse_args()
@@ -27,8 +27,8 @@ def get_file_name(seed, task, algorithm, policy):
     return ".".join([str(seed), str(task), str(algorithm), str(policy)])
 
 
-def get_memory_file(biomodel_idx, r, ucs, cs):
-    return ".".join([str(biomodel_idx), str(r), str(ucs), str(cs), "pickle"])
+def get_memory_file(biomodel_idx, r, idx):
+    return ".".join([str(biomodel_idx), str(r), str(idx), "pickle"])
 
 
 def create_system_rollout_module(system_rollout_config, y0=None, w0=None, c=None, t0=None):

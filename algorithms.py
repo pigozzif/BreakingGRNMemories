@@ -19,7 +19,7 @@ class SingleExhaustiveSolver(BaseAlgorithm):
         env = self.env.envs[0]
         env.reset()
         for action in tqdm(range(env.env.action_space.n)):
-            obs, reward, terminated, truncated, info = env.step(action)
+            obs, reward, terminated, truncated, info = env.step(np.array([action]))
             if reward > self.best_reward:
                 self.best = action
                 self.best_reward = reward
@@ -65,7 +65,7 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
                 i += 1
 
     def _evaluate_action(self, action):
-        obs, reward, terminated, truncated, info = self.env.envs[0].step(action=[int((i * 2) + a) for i, a in enumerate(action) if a != 2])
+        obs, reward, terminated, truncated, info = self.env.envs[0].step(action=np.array([int((i * 2) + a) for i, a in enumerate(action) if a != 2]))
         if terminated or truncated:
             self.env.envs[0].reset()
         return reward

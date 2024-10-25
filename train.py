@@ -29,8 +29,7 @@ def get_env(env_name, seed):
                       grn=grn,
                       obs_dim=len(create_system_rollout_module(grn.config).grn_step.y_indexes),
                       r=ids[1],
-                      ucs=ids[2],
-                      cs=ids[3])
+                      idx=ids[2])
     raise ValueError("Invalid env name: {}".format(env_name))
 
 
