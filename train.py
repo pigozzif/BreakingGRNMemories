@@ -11,7 +11,7 @@ from stable_baselines3.common.monitor import Monitor
 from algorithms import SingleExhaustiveSolver, GeneticAlgorithmCombinatorics
 from envs import MotionEquation, GRNEnv, LotkaVolterraEquation, SchrodingerEquation
 from grn import GeneRegulatoryNetwork
-from plotting import plot_reward
+# from plotting import plot_reward
 from utils import parse_args, set_seed, get_file_name, create_system_rollout_module, discrete2continuous
 
 
@@ -101,10 +101,10 @@ if __name__ == "__main__":
                   task=args.task,
                   algorithm=args.algorithm,
                   policy=args.policy)
-    plot_reward(file_name=get_file_name(seed=args.seed,
-                                        task=args.task,
-                                        algorithm=args.algorithm,
-                                        policy=args.policy))
+    # plot_reward(file_name=get_file_name(seed=args.seed,
+    #                                     task=args.task,
+    #                                     algorithm=args.algorithm,
+    #                                     policy=args.policy))
     # if args.render:
     #     save_rendering(model=agent, file_name=".".join([get_file_name(seed=args.seed,
     #                                                                   task=args.task,

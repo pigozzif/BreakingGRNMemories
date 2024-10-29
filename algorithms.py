@@ -56,8 +56,8 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
 
     def _create_pop(self, pop_size):
         i = 0
-        while i < pop_size and len(self.cache) < self.num_sols:
-            individual = np.random.randint(0, 2, self.env.envs[0].action_space.shape[0], dtype=np.int32)
+        while i < min(pop_size, self.num_sols) and len(self.cache) < self.num_sols:
+            individual = np.random.randint(0, 3, self.env.envs[0].action_space.shape[0], dtype=np.int32)
             if tuple(individual) not in self.cache:
                 self.solutions[i] = individual
                 self.fitness_list[i] = self._evaluate_action(action=individual)
@@ -119,6 +119,7 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
         while len(self.cache) < self.num_evals and len(self.cache) < self.num_sols:
             offspring, fitness = self._reproduce()
             self._survival_select(offspring=offspring, fitness_list=fitness)
+            print(len(self.cache))
         self.best = self.solutions[np.argmax(self.fitness_list)]
         return self
 
