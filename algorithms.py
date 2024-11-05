@@ -5,6 +5,8 @@ from gymnasium.spaces import Discrete
 from stable_baselines3.common.base_class import BaseAlgorithm
 from tqdm import tqdm
 
+from al import AssociativeLearning
+
 
 class SingleExhaustiveSolver(BaseAlgorithm):
 
@@ -19,7 +21,9 @@ class SingleExhaustiveSolver(BaseAlgorithm):
         env = self.env.envs[0]
         env.reset()
         for action in tqdm(range(env.env.action_space.n)):
-            obs, reward, terminated, truncated, info = env.step(np.array([action]))
+            control = env.action_map[action // 2]
+            obs, reward, terminated, truncated, info = env.step({control:
+                                                                 self.mem_data[3][control][action % 2]})
             if reward > self.best_reward:
                 self.best = action
                 self.best_reward = reward
@@ -43,7 +47,7 @@ class SingleExhaustiveSolver(BaseAlgorithm):
 
 class GeneticAlgorithmCombinatorics(BaseAlgorithm):
 
-    def __init__(self, env, seed, pop_size=20, num_evals=300):
+    def __init__(self, env, seed, pop_size=20, num_evals=1000):
         super().__init__(None, env, 0.0, seed=seed)
         self.solutions = np.zeros((pop_size, self.env.envs[0].action_space.shape[0]))
         self.fitness_list = np.zeros(pop_size)
@@ -64,8 +68,12 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
                 self.cache.add(tuple(individual))
                 i += 1
 
+    def _map_action(self, action):
+        return {self.env.envs[0].action_map[i]: self.env.envs[0].mem_data[3][self.env.envs[0].action_map[i]][a]
+                for i, a in enumerate(action) if a != 2}
+
     def _evaluate_action(self, action):
-        obs, reward, terminated, truncated, info = self.env.envs[0].step(action=np.array([int((i * 2) + a) for i, a in enumerate(action) if a != 2]))
+        obs, reward, terminated, truncated, info = self.env.envs[0].step(action=self._map_action(action=action))
         if terminated or truncated:
             self.env.envs[0].reset()
         return reward
@@ -85,11 +93,7 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
         return self._mutation(parent=child)
 
     def _mutation(self, parent=None):
-        if parent is None:
-            parent = self._tournament_select(k=1)[0]
-            child = parent.copy()
-        else:
-            child = parent
+        child = self._tournament_select(k=1)[0].copy() if parent is None else parent
         child[random.randint(0, len(child) - 1)] = random.randint(0, 2)
         return child
 
@@ -116,10 +120,11 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
 
     def learn(self, total_timesteps, callback=None, log_interval=100, tb_log_name="run", reset_num_timesteps=True,
               progress_bar=False):
-        while len(self.cache) < self.num_evals and len(self.cache) < self.num_sols:
+        i = 0
+        while i < total_timesteps and (len(self.cache) < self.num_evals and len(self.cache) < self.num_sols):
             offspring, fitness = self._reproduce()
             self._survival_select(offspring=offspring, fitness_list=fitness)
-            print(len(self.cache))
+            i += 1
         self.best = self.solutions[np.argmax(self.fitness_list)]
         return self
 
@@ -135,3 +140,33 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
     def load(self, path, env=None, device="auto", custom_objects=None, print_system_info=False, force_reset=True,
              **kwargs):
         return self
+
+
+class GeneticAlgorithmNumerical(GeneticAlgorithmCombinatorics):
+
+    def __init__(self, env, seed, pop_size=20, num_evals=1000, sigma=0.1):
+        super().__init__(env, seed, pop_size, num_evals)
+        self.solutions = np.zeros((pop_size, self.env.envs[0].action_space.shape[0] * 2))
+        self.sigma = sigma
+        self.num_sols = float("inf")
+        self.bounds = self.env.envs[0].mem_data[0]
+        for i in range(pop_size):
+            individual = np.random.normal(loc=0.0, scale=self.sigma, size=self.env.envs[0].action_space.shape[0] * 2)
+            if tuple(individual) not in self.cache:
+                self.solutions[i] = individual
+                self.fitness_list[i] = self._evaluate_action(action=individual)
+                self.cache.add(tuple(individual))
+        exit()
+
+    def _create_pop(self, pop_size):
+        return
+
+    def _map_action(self, action):
+        mask = action[-len(action) // 2:] >= 0.0
+        return {self.env.envs[0].action_map[i]: self.bounds[self.env.envs[0].action_map[i]] * np.exp(a)
+                for i, a in enumerate(action[: len(action) // 2]) if mask[i]}
+
+    def _mutation(self, parent=None):
+        child = self._tournament_select(k=1)[0].copy() if parent is None else parent
+        child[random.randint(0, len(child) - 1)] += np.random.normal(loc=0.0, scale=self.sigma, size=1)
+        return child

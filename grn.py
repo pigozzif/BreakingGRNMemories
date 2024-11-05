@@ -85,9 +85,9 @@ class GeneRegulatoryNetwork(object):
         return [create_system_rollout_module(self.config).grn_step.y_indexes[name]
                 for name in self.observed_node_names] if self.observed_node_names is not None else []
 
-    def stimulate(self, key, y0, w0, t0, stimulus, regulation):
+    def stimulate(self, key, y0, w0, t0, stimulus):
         intervention_params = DictTree()
-        for (s, val), regulation in zip(stimulus.items(), regulation):
+        for s, val in stimulus.items():
             intervention_params.y[s] = jax.numpy.array([val])
         intervals = []
         window = self.config.n_secs // (self.NUM_PULSES * 2)

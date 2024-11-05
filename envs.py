@@ -187,20 +187,17 @@ class GRNEnv(EquationEnv):
                 m[i] = sp
                 i += 1
         return m
-
+# 0: 0-1 1: 2-3 2: 4-5 3: 6-7
     def _step(self, t, y, actions):
         stimuli = {self.s: self.mem_data[3][self.s][self.stimulus_reg % 2]}
-        regulation = [self.stimulus_reg]
-        for action in actions:
-            control = self.action_map[action // 2]
-            stimuli[control] = self.mem_data[3][control][action % 2]
-            regulation.append(action % 2)
+        for control, value in actions.items():
+            # control = self.action_map[action // 2]
+            stimuli[control] = value  # self.mem_data[3][control][action % 2]
         return self.grn.stimulate(key=self.key,
                                   y0=y,
                                   w0=self.w,
                                   t0=t,
-                                  stimulus=stimuli,
-                                  regulation=regulation)
+                                  stimulus=stimuli)
 
     def get_init_conditions(self):
         return self.mem_data[0]
@@ -226,9 +223,6 @@ class GRNEnv(EquationEnv):
         return np.mean(output.ys[self.r, :]) / (self.mean_relax / self.r_scale) - 1.0
 
     def step(self, action):
-        # action = np.zeros(self.obs_dim)
-        if not isinstance(action, np.ndarray):
-            action = np.array([action])
         output = self._step(t=self.t,
                             y=self.x,
                             actions=action)

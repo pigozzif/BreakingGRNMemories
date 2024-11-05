@@ -3,7 +3,6 @@ import pickle
 from dataclasses import dataclass
 from enum import IntEnum
 
-
 from grn import *
 from utils import parse_args, set_seed
 
@@ -25,12 +24,12 @@ class MemoryCircuit(object):
 
 class AssociativeLearning(object):
     NUM_PULSES = 5
+    US_SCALE = 100.0
 
-    def __init__(self, seed, model_id, us_scale_up=100.0, r_scale_up=2.0, n_secs=2500, **kwargs):
+    def __init__(self, seed, model_id, r_scale_up=2.0, n_secs=2500, **kwargs):
         self.i = model_id
         self.random_key = jrandom.PRNGKey(seed)
         self.grn = GeneRegulatoryNetwork.create(biomodel_idx=model_id, **kwargs)
-        self.us_scale_up = us_scale_up
         self.r_scale_up = r_scale_up
         self.n_secs = n_secs
         self.grn.set_time(n_secs=n_secs * 3)
@@ -45,8 +44,8 @@ class AssociativeLearning(object):
 
     def _get_bounds(self):
         bounds = np.zeros((len(self.relax_y), 2))
-        bounds[:, 0] = np.min(self.relax_y, axis=1) / self.us_scale_up
-        bounds[:, 1] = np.max(self.relax_y, axis=1) * self.us_scale_up
+        bounds[:, 0] = np.min(self.relax_y, axis=1) / self.US_SCALE
+        bounds[:, 1] = np.max(self.relax_y, axis=1) * self.US_SCALE
         return bounds
 
     def relax(self, y0=None, w0=None):
@@ -68,8 +67,7 @@ class AssociativeLearning(object):
                                 y0=self.genes_ss,
                                 w0=self.w_ss,
                                 t0=2500,
-                                stimulus={stimulus: self.bounds[stimulus, int(regulation) % 2]},
-                                regulation=[regulation])
+                                stimulus={stimulus: self.bounds[stimulus, int(regulation) % 2]})
         if np.mean(x2.ys[response, :]) >= self.r_scale_up * np.mean(self.relax_y[response, :]) and np.mean(
                 x2.ys[response, :]) >= self.r_scale_up * np.mean(
             self.reference.ys[response, self.relax_t:self.relax_t * 2]):
@@ -111,24 +109,21 @@ class AssociativeLearning(object):
                                     stimulus={ucs_circuit.stimulus:
                                                   self.bounds[ucs_circuit.stimulus, int(ucs_circuit.stimulus_reg) % 2],
                                               cs_circuit.stimulus:
-                                                  self.bounds[cs_circuit.stimulus, int(cs_circuit.stimulus_reg) % 2]},
-                                    regulation=[ucs_circuit.stimulus_reg, cs_circuit.stimulus_reg])
+                                                  self.bounds[cs_circuit.stimulus, int(cs_circuit.stimulus_reg) % 2]})
             up_down_r = self.is_r_regulated(e1, cs_circuit.response)
             if int(up_down_r) != 0:
                 e2 = self.grn.stimulate(key=self.random_key,
                                         y0=e1.ys[:, -1],
                                         w0=e1.ws[:, -1],
                                         t0=self.n_secs * 2,
-                                        stimulus={},
-                                        regulation=[])
+                                        stimulus={})
                 e3 = self.grn.stimulate(key=self.random_key,
                                         y0=e2.ys[:, -1],
                                         w0=e2.ws[:, -1],
                                         t0=self.n_secs * 3,
-                                        stimulus={cs_circuit.stimulus:
+                                        stimulus={ucs_circuit.stimulus:
                                                       self.bounds[
-                                                          cs_circuit.stimulus, int(cs_circuit.stimulus_reg) % 2]},
-                                        regulation=[cs_circuit.stimulus_reg])
+                                                          ucs_circuit.stimulus, int(ucs_circuit.stimulus_reg) % 2]})
                 is_mem = self.is_memory(e3, ucs_circuit.response, up_down_r)
                 if is_mem:
                     self.save_memory(e3,
@@ -165,8 +160,8 @@ class AssociativeLearning(object):
 
     def save_memory(self, e3, r, ucs, cs, response_reg, stimulus_reg):
         # new_bounds = self.bounds.copy()
-        # new_bounds[:, 0] *= self.us_scale_up
-        # new_bounds[:, 1] /= self.us_scale_up
+        # new_bounds[:, 0] *= self.us_scale
+        # new_bounds[:, 1] /= self.us_scale
         idx = max([int(file.split(".")[2]) for file in os.listdir("memories")
                    if file.startswith(".".join([str(self.i), str(r), ""]))] + [0]) + 1
         pickle.dump([e3.ys[:, -1],

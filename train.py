@@ -8,7 +8,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 
-from algorithms import SingleExhaustiveSolver, GeneticAlgorithmCombinatorics
+from algorithms import SingleExhaustiveSolver, GeneticAlgorithmCombinatorics, GeneticAlgorithmNumerical
 from envs import MotionEquation, GRNEnv, LotkaVolterraEquation, SchrodingerEquation
 from grn import GeneRegulatoryNetwork
 # from plotting import plot_reward
@@ -42,6 +42,8 @@ def get_algorithm(algorithm, **kwargs):
         return SingleExhaustiveSolver(env=kwargs["env"], seed=kwargs["seed"])
     elif algorithm == "ga":
         return GeneticAlgorithmCombinatorics(env=kwargs["env"], seed=kwargs["seed"])
+    elif algorithm == "es":
+        return GeneticAlgorithmNumerical(env=kwargs["env"], seed=kwargs["seed"])
     raise ValueError("Invalid algorithm name: {}".format(algorithm))
 
 
