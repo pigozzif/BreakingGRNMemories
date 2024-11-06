@@ -35,11 +35,11 @@ def plot_reward(file_name):
     plt.ylabel("reward", fontsize=10)
     plt.legend()
     _flush_plot(".".join([task, "png"]))
-
+# 15%
 
 def plot_broken_memories():
     data = _load_all_data()
-    algorithms = data["algorithm"].unique()
+    algorithms = [algorithm for (algorithm,), _ in data.groupby(["algorithm"])]
     plt.bar(np.arange(len(algorithms)),
             height=[np.mean([any(d["is_broken"]) for _, d in traj.groupby(["id"])])
                     for _, traj in data.groupby(["algorithm"])],

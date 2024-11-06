@@ -144,29 +144,38 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
 
 class GeneticAlgorithmNumerical(GeneticAlgorithmCombinatorics):
 
-    def __init__(self, env, seed, pop_size=20, num_evals=1000, sigma=0.1):
+    def __init__(self, env, seed, pop_size=20, num_evals=1000, sigma=0.01):
         super().__init__(env, seed, pop_size, num_evals)
         self.solutions = np.zeros((pop_size, self.env.envs[0].action_space.shape[0] * 2))
         self.sigma = sigma
         self.num_sols = float("inf")
         self.bounds = self.env.envs[0].mem_data[0]
         for i in range(pop_size):
-            individual = np.random.normal(loc=0.0, scale=self.sigma, size=self.env.envs[0].action_space.shape[0] * 2)
+            individual = np.hstack([np.random.normal(loc=0.0,
+                                                     scale=self.sigma,
+                                                     size=self.env.envs[0].action_space.shape[0]),
+                                    np.random.randint(low=0,
+                                                      high=2,
+                                                      size=self.env.envs[0].action_space.shape[0])])
             if tuple(individual) not in self.cache:
                 self.solutions[i] = individual
                 self.fitness_list[i] = self._evaluate_action(action=individual)
                 self.cache.add(tuple(individual))
-        exit()
 
     def _create_pop(self, pop_size):
         return
 
     def _map_action(self, action):
-        mask = action[-len(action) // 2:] >= 0.0
+        print(len(self.cache))
+        mask = action[-len(action) // 2:]
         return {self.env.envs[0].action_map[i]: self.bounds[self.env.envs[0].action_map[i]] * np.exp(a)
                 for i, a in enumerate(action[: len(action) // 2]) if mask[i]}
 
     def _mutation(self, parent=None):
         child = self._tournament_select(k=1)[0].copy() if parent is None else parent
-        child[random.randint(0, len(child) - 1)] += np.random.normal(loc=0.0, scale=self.sigma, size=1)
+        idx = random.randint(0, len(child) - 1)
+        if idx < len(child) // 2:
+            child[idx] += np.random.normal(loc=0.0, scale=self.sigma, size=1)
+        else:
+            child[idx] = 1 - child[idx]
         return child

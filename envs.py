@@ -187,12 +187,11 @@ class GRNEnv(EquationEnv):
                 m[i] = sp
                 i += 1
         return m
-# 0: 0-1 1: 2-3 2: 4-5 3: 6-7
+
     def _step(self, t, y, actions):
         stimuli = {self.s: self.mem_data[3][self.s][self.stimulus_reg % 2]}
         for control, value in actions.items():
-            # control = self.action_map[action // 2]
-            stimuli[control] = value  # self.mem_data[3][control][action % 2]
+            stimuli[control] = value
         return self.grn.stimulate(key=self.key,
                                   y0=y,
                                   w0=self.w,
