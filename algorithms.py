@@ -23,7 +23,7 @@ class SingleExhaustiveSolver(BaseAlgorithm):
         for action in tqdm(range(env.env.action_space.n)):
             control = env.action_map[action // 2]
             obs, reward, terminated, truncated, info = env.step({control:
-                                                                 self.mem_data[3][control][action % 2]})
+                                                                 env.mem_data[3][control][action % 2]})
             if reward > self.best_reward:
                 self.best = action
                 self.best_reward = reward
