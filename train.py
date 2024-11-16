@@ -42,7 +42,7 @@ def get_algorithm(algorithm, **kwargs):
         return SingleExhaustiveSolver(env=kwargs["env"], seed=kwargs["seed"])
     elif algorithm == "ga":
         return GeneticAlgorithmCombinatorics(env=kwargs["env"], seed=kwargs["seed"])
-    elif algorithm == "es":
+    elif algorithm == "es-unif":
         return GeneticAlgorithmNumerical(env=kwargs["env"], seed=kwargs["seed"])
     raise ValueError("Invalid algorithm name: {}".format(algorithm))
 

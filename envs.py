@@ -217,9 +217,11 @@ class GRNEnv(EquationEnv):
         return np.insert(actions, self.r, [0.0])
 
     def _get_reward(self, output):
-        if self.response_reg == 1:
-            return - ((self.r_scale * self.mean_relax) / np.mean(output.ys[self.r, :]) - 1.0)
-        return np.mean(output.ys[self.r, :]) / (self.mean_relax / self.r_scale) - 1.0
+        # if self.response_reg == 1:
+        #     return - ((self.r_scale * self.mean_relax) / np.mean(output.ys[self.r, :]) - 1.0)
+        # return np.mean(output.ys[self.r, :]) / (self.mean_relax / self.r_scale) - 1.0
+        mean = np.mean(output.ys[self.r, :])
+        return -mean if self.response_reg == 1 else mean
 
     def step(self, action):
         output = self._step(t=self.t,

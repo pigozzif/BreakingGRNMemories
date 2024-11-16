@@ -76,6 +76,8 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
         obs, reward, terminated, truncated, info = self.env.envs[0].step(action=self._map_action(action=action))
         if terminated or truncated:
             self.env.envs[0].reset()
+        if truncated or np.isnan(reward):
+            reward = float("-inf")
         return reward
 
     def _tournament_select(self, k, n=5):
@@ -108,6 +110,8 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
                 children.append(child)
                 fitness.append(self._evaluate_action(action=child))
                 self.cache.add(tuple(child))
+        # print(min([child[:int(len(child) // 2)] for child in children]),
+        #       max([child[:int(len(child) // 2)] for child in children]))
         return children, fitness
 
     def _survival_select(self, offspring, fitness_list):
@@ -144,16 +148,16 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
 
 class GeneticAlgorithmNumerical(GeneticAlgorithmCombinatorics):
 
-    def __init__(self, env, seed, pop_size=20, num_evals=1000, sigma=0.01):
+    def __init__(self, env, seed, pop_size=20, num_evals=1000, sigma=0.1):
         super().__init__(env, seed, pop_size, num_evals)
         self.solutions = np.zeros((pop_size, self.env.envs[0].action_space.shape[0] * 2))
         self.sigma = sigma
         self.num_sols = float("inf")
         self.bounds = self.env.envs[0].mem_data[0]
         for i in range(pop_size):
-            individual = np.hstack([np.random.normal(loc=0.0,
-                                                     scale=self.sigma,
-                                                     size=self.env.envs[0].action_space.shape[0]),
+            individual = np.hstack([np.random.uniform(low=0.0,
+                                                      high=6.0,  # self.sigma,
+                                                      size=self.env.envs[0].action_space.shape[0]),
                                     np.random.randint(low=0,
                                                       high=2,
                                                       size=self.env.envs[0].action_space.shape[0])])
@@ -166,7 +170,7 @@ class GeneticAlgorithmNumerical(GeneticAlgorithmCombinatorics):
         return
 
     def _map_action(self, action):
-        print(len(self.cache))
+        # print(len(self.cache))
         mask = action[-len(action) // 2:]
         return {self.env.envs[0].action_map[i]: self.bounds[self.env.envs[0].action_map[i]] * np.exp(a)
                 for i, a in enumerate(action[: len(action) // 2]) if mask[i]}
