@@ -69,8 +69,8 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
                 i += 1
 
     def _map_action(self, action):
-        return {self.env.envs[0].action_map[i]: self.env.envs[0].mem_data[3][self.env.envs[0].action_map[i]][a]
-                for i, a in enumerate(action) if a != 2}
+        return {self.env.envs[0].env.action_map[i]: self.env.envs[0].env.mem_data[3][self.env.envs[0].env.action_map[i]][int(a)]
+                for i, a in enumerate(action) if int(a) != 2}
 
     def _evaluate_action(self, action):
         obs, reward, terminated, truncated, info = self.env.envs[0].step(action=self._map_action(action=action))

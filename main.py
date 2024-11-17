@@ -21,7 +21,7 @@ if __name__ == "__main__":
         # os.system("python -W ignore al.py --task={}".format(biomodel_idx))
         # for circuit in [file for file in os.listdir("memories") if file.startswith(".".join([str(biomodel_idx), ""]))]:
         os.system(
-            "python -W ignore train.py --task={0} --algorithm=es-unif --render=False".format(circuit.strip(".pickle")
+            "python -W ignore train.py --task={0} --algorithm=ga --render=False".format(circuit.strip(".pickle")
                                                                                              .replace(".", "-")))
         print(circuit)
     os.system("python -W ignore plotting.py")
