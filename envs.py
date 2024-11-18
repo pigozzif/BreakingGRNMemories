@@ -1,6 +1,8 @@
 import abc
+import json
 import os
 import pickle
+import sys
 
 import gymnasium
 import jax
@@ -254,3 +256,14 @@ class GRNEnv(EquationEnv):
         self.w = self.mem_data[1]
         self.c = self.mem_data[2]
         return self.x, self._get_info()
+
+
+if __name__ == "__main__":
+    seed = sys.argv[1]
+    env = pickle.load(open(os.path.join("envs", ".".join([str(seed), "pickle"])), "rb"))
+    with open(os.path.join("pop", sys.argv[4], ".".join([sys.argv[2], "json"])), "w") as f:
+        d = env.step(action={int(i.split(",")[0]): float(i.split(",")[1]) for i in sys.argv[3].split("/")})
+        json.dump({"r": d[1].item(),
+                   "terminated": bool(d[2]),
+                   "truncated": bool(d[3]),
+                   "is_broken": bool(d[-1]["is_broken"])}, f)

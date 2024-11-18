@@ -39,25 +39,41 @@ def get_algorithm(algorithm, **kwargs):
     elif algorithm == "rppo":
         return RecurrentPPO(**kwargs)
     elif algorithm == "single":
-        return SingleExhaustiveSolver(env=kwargs["env"], seed=kwargs["seed"])
+        return SingleExhaustiveSolver(env=kwargs["env"],
+                                      seed=kwargs["seed"])
     elif algorithm == "ga":
-        return GeneticAlgorithmCombinatorics(env=kwargs["env"], seed=kwargs["seed"])
-    elif algorithm == "es-unif":
-        return GeneticAlgorithmNumerical(env=kwargs["env"], seed=kwargs["seed"])
+        return GeneticAlgorithmCombinatorics(env=kwargs["env"],
+                                             seed=kwargs["seed"],
+                                             file_name=kwargs["file_name"],
+                                             num_workers=kwargs["num_workers"])
+    elif algorithm == "es":
+        return GeneticAlgorithmNumerical(env=kwargs["env"],
+                                         seed=kwargs["seed"],
+                                         file_name=kwargs["file_name"],
+                                         num_workers=kwargs["num_workers"])
     raise ValueError("Invalid algorithm name: {}".format(algorithm))
 
 
-def train(seed, task, algorithm, policy, num_steps=int(5e3)):
+def train(seed, task, algorithm, policy, num_workers, num_steps=int(5e3)):
     file_name = get_file_name(seed=seed, task=task, algorithm=algorithm, policy=policy)
-    env = Monitor(env=get_env(env_name=task, seed=seed),
-                  filename=os.path.join("output", file_name + ".csv"),
-                  info_keywords=("is_broken",))
-    model = get_algorithm(algorithm=algorithm, seed=seed, policy=policy, env=env, verbose=1)
+    env = get_env(env_name=task, seed=seed)
+    if algorithm != "ga" and algorithm != "es":
+        env = Monitor(env=env,
+                      filename=os.path.join("output", file_name + ".csv"),
+                      info_keywords=("is_broken",))
+    model = get_algorithm(algorithm=algorithm,
+                          seed=seed,
+                          policy=policy,
+                          env=env,
+                          file_name=".".join([file_name, "csv"]),
+                          num_workers=num_workers,
+                          verbose=1)
     # model.load(os.path.join("models", file_name))
     # return model
     model.learn(total_timesteps=num_steps, progress_bar=True)
     model.save(os.path.join("models", file_name))
-    os.rename(os.path.join("output", file_name + ".csv.monitor.csv"), os.path.join("output", file_name + ".csv"))
+    if algorithm != "ga" and algorithm != "es":
+        os.rename(os.path.join("output", file_name + ".csv.monitor.csv"), os.path.join("output", file_name + ".csv"))
     return model
 
 
@@ -99,10 +115,17 @@ def save_rendering(model, file_name, num_steps=1):
 if __name__ == "__main__":
     args = parse_args()
     set_seed(s=args.seed)
+    os.makedirs(os.path.join("pop", ".".join([str(args.seed), str(args.task), str(args.algorithm), str(args.policy)])),
+                exist_ok=True)
+    os.makedirs("envs", exist_ok=True)
     agent = train(seed=args.seed,
                   task=args.task,
                   algorithm=args.algorithm,
-                  policy=args.policy)
+                  policy=args.policy,
+                  num_workers=args.np)
+    os.system("rm {}/*".format(os.path.join("pop", ".".join([str(args.seed), str(args.task), str(args.algorithm),
+                                                             str(args.policy)]))))
+    os.system("rm {}/*".format(os.path.join("envs")))
     # plot_reward(file_name=get_file_name(seed=args.seed,
     #                                     task=args.task,
     #                                     algorithm=args.algorithm,
