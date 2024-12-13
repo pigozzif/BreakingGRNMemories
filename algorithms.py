@@ -71,13 +71,12 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
         self.cache = set()
         self.env.envs[0].reset()
         self.num_sols = 3 ** self.env.envs[0].action_space.shape[0]
+        self.num_workers = num_workers
         self.solutions = np.zeros((min(pop_size, self.num_sols), self.env.envs[0].action_space.shape[0]))
         pickle.dump(self.env.envs[0].env, open(os.path.join("envs", ".".join([str(seed), "pickle"])), "wb"))
-        self._create_pop(pop_size=pop_size)
         self.start = time.time()
         self._create_file(file_name=file_name)
         self.dir_name = self.file_name.replace(".csv", "").replace("output/", "")
-        self.num_workers = num_workers
         self._create_pop(pop_size=pop_size)
         self.num_evals = num_evals
         self.best = None
@@ -183,20 +182,22 @@ class GeneticAlgorithmCombinatorics(BaseAlgorithm):
 
 class GeneticAlgorithmNumerical(GeneticAlgorithmCombinatorics):
 
-    def __init__(self, env, seed, file_name, pop_size=20, num_evals=20, num_workers=1, sigma=0.1):
-        super().__init__(env, seed, file_name=file_name, pop_size=pop_size, num_evals=num_evals, num_workers=num_workers)
-        self.solutions = np.zeros((pop_size, self.env.envs[0].action_space.shape[0] * 2))
+    def __init__(self, env, seed, file_name, pop_size=100, num_evals=10000, num_workers=1, sigma=0.1):
+        super().__init__(env, seed, file_name=file_name, pop_size=pop_size, num_evals=num_evals,
+                         num_workers=num_workers)
+        self.solutions = np.zeros((pop_size, self.env.envs[0].action_space.shape[0]))  # * 2))
         self.sigma = sigma
         self.num_sols = float("inf")
         self.bounds = self.env.envs[0].mem_data[0]
         self.idx = 0
         for i in range(pop_size):
-            individual = np.hstack([np.random.uniform(low=0.0,
-                                                      high=6.0,  # self.sigma,
-                                                      size=self.env.envs[0].action_space.shape[0]),
-                                    np.random.randint(low=0,
-                                                      high=2,
-                                                      size=self.env.envs[0].action_space.shape[0])])
+            individual = np.random.uniform(low=0.0, high=6.0, size=self.env.envs[0].action_space.shape[0])
+            # np.hstack([np.random.uniform(low=0.0,
+            #                              high=6.0,  # self.sigma,
+            #                              size=self.env.envs[0].action_space.shape[0]),
+            #            np.random.randint(low=0,
+            #                              high=2,
+            #                              size=self.env.envs[0].action_space.shape[0])])
             if tuple(individual) not in self.cache:
                 self.solutions[i] = individual
                 self.cache.add(tuple(individual))
@@ -214,8 +215,8 @@ class GeneticAlgorithmNumerical(GeneticAlgorithmCombinatorics):
     def _mutation(self, parent=None):
         child = self._tournament_select(k=1)[0].copy() if parent is None else parent
         idx = random.randint(0, len(child) - 1)
-        if idx < len(child) // 2:
-            child[idx] += np.random.normal(loc=0.0, scale=self.sigma, size=1)
-        else:
-            child[idx] = 1 - child[idx]
+        # if idx < len(child) // 2:
+        child[idx] += np.random.normal(loc=0.0, scale=self.sigma, size=1)
+        # else:
+        #     child[idx] = 1 - child[idx]
         return child
