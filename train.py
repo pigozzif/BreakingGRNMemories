@@ -22,10 +22,11 @@ def get_env(env_name, seed):
         return LotkaVolterraEquation()
     elif env_name == "schrodinger":
         return SchrodingerEquation()
-    elif "-" in env_name and all(map(lambda x: x.isnumeric(), env_name.split("-"))):
+    elif "-" in env_name:
         ids = env_name.split("-")
         grn = GeneRegulatoryNetwork.create(biomodel_idx=int(ids[0]))
         return GRNEnv(seed=seed,
+                      exp=ids[-1],
                       grn=grn,
                       obs_dim=len(create_system_rollout_module(grn.config).grn_step.y_indexes),
                       r=ids[1],

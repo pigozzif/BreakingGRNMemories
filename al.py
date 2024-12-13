@@ -13,12 +13,6 @@ class Regulation(IntEnum):
     DOWN = 2
 
 
-class Experiment(IntEnum):
-    NONE = 0
-    HABIT = 1
-    SENS = 2
-
-
 @dataclass
 class MemoryCircuit(object):
     stimulus: int
@@ -170,8 +164,6 @@ class AssociativeLearning(object):
                                    stimulus={ucs_circuit.stimulus:
                                                  self.bounds[ucs_circuit.stimulus, int(ucs_circuit.stimulus_reg) % 2]})
             n_secs += e.ys.shape[1] * self.grn.config.deltaT
-            # print(i, is_habit, is_sens, np.mean(e.ys[ucs_circuit.response, :]), np.mean(prev_y[ucs_circuit.response, :]),
-            #       ucs_circuit.response_reg)
             if i == 0 or is_habit:
                 is_habit = self.is_habituation(e=e,
                                                prev_e=prev_y,
@@ -179,9 +171,9 @@ class AssociativeLearning(object):
                                                scale=scale)
             if i == 0 or is_sens:
                 is_sens = self.is_sensitization(e=e,
-                                                  prev_e=prev_y,
-                                                  ucs_circuit=ucs_circuit,
-                                                  scale=scale)
+                                                prev_e=prev_y,
+                                                ucs_circuit=ucs_circuit,
+                                                scale=scale)
             if not is_habit and not is_sens:
                 self.grn.set_time(n_secs=self.n_secs)
                 break
@@ -189,15 +181,15 @@ class AssociativeLearning(object):
                            y0=e.ys[:, -1],
                            w0=e.ws[:, -1])
             n_secs += r.ys.shape[1] * self.grn.config.deltaT
-            y0 = r.ys[:, -1].copy()
-            w0 = r.ws[:, -1].copy()
+            y0 = r.ys[:, -1]
+            w0 = r.ws[:, -1]
             self.grn.set_time(n_secs=self.n_secs + ((i // 2 + 1) * increment))
             prev_y = e.ys
         else:
             self.save_memory(e,
                              r=ucs_circuit.response,
-                             ucs=ucs_circuit.stimulus,
-                             cs=None,
+                             ucs=None,
+                             cs=ucs_circuit,
                              response_reg=ucs_circuit.response_reg,
                              stimulus_reg=ucs_circuit.stimulus_reg,
                              exp="habit" if is_habit else "sens")
@@ -205,17 +197,11 @@ class AssociativeLearning(object):
         del e
 
     def is_habituation(self, e, prev_e, ucs_circuit, scale):
-        mean_e = np.mean(e.ys[ucs_circuit.response, :])
-        mean_prev = np.mean(prev_e[ucs_circuit.response, :])
-        mean_x2 = np.mean(ucs_circuit.y2[ucs_circuit.response, :])
         if ucs_circuit.response_reg == 1:
             return np.mean(e.ys[ucs_circuit.response, :]) <= np.mean(prev_e[ucs_circuit.response, :]) / scale
         return np.mean(e.ys[ucs_circuit.response, :]) >= np.mean(prev_e[ucs_circuit.response, :]) * scale
 
     def is_sensitization(self, e, prev_e, ucs_circuit, scale):
-        mean_e = np.mean(e.ys[ucs_circuit.response, :])
-        mean_prev = np.mean(prev_e[ucs_circuit.response, :])
-        mean_x2 = np.mean(ucs_circuit.y2[ucs_circuit.response, :])
         if ucs_circuit.response_reg == 1:
             return np.mean(e.ys[ucs_circuit.response, :]) >= np.mean(prev_e[ucs_circuit.response, :]) * scale
         return np.mean(e.ys[ucs_circuit.response, :]) <= np.mean(prev_e[ucs_circuit.response, :]) / scale
