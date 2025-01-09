@@ -20,8 +20,8 @@ class MemoryCircuit(object):
     stimulus_reg: Regulation
     response_reg: Regulation
     is_ucs: bool
-    y2: np.array
-    w2: np.array
+    ys: np.array
+    ws: np.array
 
 
 class AssociativeLearning(object):
@@ -77,8 +77,8 @@ class AssociativeLearning(object):
                                  response=response,
                                  stimulus_reg=regulation,
                                  response_reg=Regulation(1),
-                                 y2=x2.ys,
-                                 w2=x2.ws,
+                                 ys=x2.ys,
+                                 ws=x2.ws,
                                  is_ucs=True)
         elif (mean_x2 <= (1 / self.r_scale_up) * np.mean(self.relax_y[response, :])
               and mean_x2 <= (1 / self.r_scale_up) * np.mean(
@@ -87,16 +87,16 @@ class AssociativeLearning(object):
                                  response=response,
                                  stimulus_reg=regulation,
                                  response_reg=Regulation(2),
-                                 y2=x2.ys,
-                                 w2=x2.ws,
+                                 ys=x2.ys,
+                                 ws=x2.ws,
                                  is_ucs=True)
         return MemoryCircuit(stimulus=stimulus,
                              response=response,
                              stimulus_reg=regulation,
                              response_reg=Regulation(0),
                              is_ucs=False,
-                             y2=None,
-                             w2=None)
+                             ys=None,
+                             ws=None)
 
     def eval_mem_for_r(self, response, exp="ass"):
         if not self.mem_circuits[response]:
@@ -147,16 +147,17 @@ class AssociativeLearning(object):
         return is_mem
 
     def test_habituation(self, ucs_circuit, n_stim=4, scale=1.5, increment=500):
-        prev_y = ucs_circuit.y2
+        e = None
         r = self.relax(t0=self.n_secs * 2,
-                       y0=ucs_circuit.y2[:, -1],
-                       w0=ucs_circuit.w2[:, -1])
+                       y0=ucs_circuit.ys[:, -1],
+                       w0=ucs_circuit.ws[:, -1])
         y0 = r.ys[:, -1]
         w0 = r.ws[:, -1]
         n_secs = self.n_secs * 3
         is_habit = False
         is_sens = False
         for i in range(0, n_stim * 2, 2):
+            prev_e = e.copy() if e is not None else ucs_circuit
             e = self.grn.stimulate(key=self.random_key,
                                    y0=y0,
                                    w0=w0,
@@ -166,12 +167,12 @@ class AssociativeLearning(object):
             n_secs += e.ys.shape[1] * self.grn.config.deltaT
             if i == 0 or is_habit:
                 is_habit = self.is_habituation(e=e,
-                                               prev_e=prev_y,
+                                               prev_e=prev_e.ys,
                                                ucs_circuit=ucs_circuit,
                                                scale=scale)
             if i == 0 or is_sens:
                 is_sens = self.is_sensitization(e=e,
-                                                prev_e=prev_y,
+                                                prev_e=prev_e.ys,
                                                 ucs_circuit=ucs_circuit,
                                                 scale=scale)
             if not is_habit and not is_sens:
@@ -184,12 +185,13 @@ class AssociativeLearning(object):
             y0 = r.ys[:, -1]
             w0 = r.ws[:, -1]
             self.grn.set_time(n_secs=self.n_secs + ((i // 2 + 1) * increment))
-            prev_y = e.ys
         else:
-            self.save_memory(e,
+            if not is_habit:
+                return
+            self.save_memory(prev_e,
                              r=ucs_circuit.response,
                              ucs=None,
-                             cs=ucs_circuit,
+                             cs=ucs_circuit.stimulus,
                              response_reg=ucs_circuit.response_reg,
                              stimulus_reg=ucs_circuit.stimulus_reg,
                              exp="habit" if is_habit else "sens")
@@ -197,14 +199,22 @@ class AssociativeLearning(object):
         del e
 
     def is_habituation(self, e, prev_e, ucs_circuit, scale):
-        if ucs_circuit.response_reg == 1:
-            return np.mean(e.ys[ucs_circuit.response, :]) <= np.mean(prev_e[ucs_circuit.response, :]) / scale
-        return np.mean(e.ys[ucs_circuit.response, :]) >= np.mean(prev_e[ucs_circuit.response, :]) * scale
+        mean = np.mean(e.ys[ucs_circuit.response, :])
+        prev_mean = np.mean(prev_e[ucs_circuit.response, :])
+        if mean < 0.0 or prev_mean < 0.0:
+            return False
+        elif ucs_circuit.response_reg == 1:
+            return mean < prev_mean / scale
+        return mean > prev_mean * scale
 
     def is_sensitization(self, e, prev_e, ucs_circuit, scale):
+        mean = np.mean(e.ys[ucs_circuit.response, :])
+        prev_mean = np.mean(prev_e[ucs_circuit.response, :])
+        if mean < 0.0 or prev_mean < 0.0:
+            return False
         if ucs_circuit.response_reg == 1:
-            return np.mean(e.ys[ucs_circuit.response, :]) >= np.mean(prev_e[ucs_circuit.response, :]) * scale
-        return np.mean(e.ys[ucs_circuit.response, :]) <= np.mean(prev_e[ucs_circuit.response, :]) / scale
+            return mean > prev_mean * scale
+        return mean < prev_mean / scale
 
     def is_r_regulated(self, e1, response):
         return self.is_r_regulated_gen(x1=self.relax_y[response, :],
@@ -234,6 +244,12 @@ class AssociativeLearning(object):
         # new_bounds[:, 1] /= self.us_scale
         idx = max([int(file.split(".")[2]) for file in os.listdir(os.path.join("memories", exp))
                    if file.startswith(".".join([str(self.i), str(r), ""]))] + [0]) + 1
+        file_name = os.path.join("memories",
+                                 exp,
+                                 ".".join([str(self.i),
+                                           str(r),
+                                           str(idx),
+                                           "pickle"]))
         pickle.dump([e.ys[:, -1],
                      e.ws[:, -1],
                      e.cs[:, -1],
@@ -245,13 +261,7 @@ class AssociativeLearning(object):
                      r,
                      ucs,
                      cs],
-                    open(os.path.join("memories",
-                                      exp,
-                                      ".".join([str(self.i),
-                                                str(r),
-                                                str(idx),
-                                                "pickle"])),
-                         "wb"))
+                    open(file_name, "wb"))
 
 
 def learn(seed, i, exp):
