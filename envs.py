@@ -274,7 +274,6 @@ class GRNEnv(EquationEnv):
         self.obs = output.ys  # np.mean(output.ys, axis=1)
         r = self._get_reward(output=output)
         reward = (r - np.median(self.rewards)) / (np.std(self.rewards) if len(self.rewards) > 1 else 1.0)
-        print(r, reward)
         self.rewards.append(r)
         self.t += output.ys.shape[1] * self.dt
         info = self._get_info()

@@ -59,7 +59,7 @@ def get_algorithm(algorithm, **kwargs):
     raise ValueError("Invalid algorithm name: {}".format(algorithm))
 
 
-def train(seed, task, algorithm, policy, num_workers, num_steps=int(5e3)):
+def train(seed, task, algorithm, policy, num_workers, num_steps=int(1e5)):
     file_name = get_file_name(seed=seed, task=task, algorithm=algorithm, policy=policy)
     env = get_env(env_name=task, seed=seed)
     if algorithm != "ga" and algorithm != "es":
