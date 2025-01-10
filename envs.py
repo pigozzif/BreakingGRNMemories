@@ -161,9 +161,10 @@ class GRNEnv(EquationEnv):
         super().__init__(obs_dim, 1.0)
         self.grn = grn
         self.key = jax.random.PRNGKey(seed)
-        self.mem_data = pickle.load(open(os.path.join("old_memories", exp, get_memory_file(biomodel_idx=grn.biomodel_idx,
-                                                                                       r=r,
-                                                                                       idx=idx)), "rb"))
+        self.mem_data = pickle.load(
+            open(os.path.join("memories", exp, get_memory_file(biomodel_idx=grn.biomodel_idx,
+                                                               r=r,
+                                                               idx=idx)), "rb"))
         self.r = int(r)
         self.s = self.mem_data[10 if self.mem_data[10] is not None else 9]
         self.ranges = [abs(self.mem_data[3][i][1] - self.mem_data[3][i][0]) for i in range(self.obs_dim)]
@@ -182,8 +183,10 @@ class GRNEnv(EquationEnv):
         self.scale_a = scale_a
         self.obs = None
         self.action_map = self._build_action_map()
-        self.grn.set_time(2500)  # 4000)
+        self.grn.set_time(500)  # 4000)
+        self.grn.NUM_PULSES = 1
         self.exp = exp
+        self.rewards = [self.mean_relax]
 
     def _build_action_map(self):
         m = {}
@@ -269,7 +272,10 @@ class GRNEnv(EquationEnv):
         self.w = output.ws[:, -1]
         self.c = output.cs[:, -1]
         self.obs = output.ys  # np.mean(output.ys, axis=1)
-        reward = self._get_reward(output=output)
+        r = self._get_reward(output=output)
+        reward = (r - np.median(self.rewards)) / (np.std(self.rewards) if len(self.rewards) > 1 else 1.0)
+        print(r, reward)
+        self.rewards.append(r)
         self.t += output.ys.shape[1] * self.dt
         info = self._get_info()
         del output
@@ -301,7 +307,7 @@ class GRNEnv(EquationEnv):
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed, options=options)
-        self.t = 10000   # 25500
+        self.t = 10000  # 25500
         self.w = self.mem_data[1]
         self.c = self.mem_data[2]
         self.prev_mean = self.x

@@ -12,9 +12,9 @@ from grn import GeneRegulatoryNetwork
 # TODO: 21-habit
 if __name__ == "__main__":
     # files = [file for file in os.listdir("memories") if file.endswith("pickle")]
-    # ids = [2, 3, 4, 5, 6, 10, 69, 16, 17, 22, 21, 23]  # , 26, 27, 483, 29, 31, 631, 203, 204, 209, 210, 275, 39, 50]
+    # ids = [3, 4, 6, 10, 69]  #, 16, 17, 22, 21, 23]  # , 26, 27, 483, 29, 31, 631, 203, 204, 209, 210, 275, 39, 50]
     # with Pool(len(ids)) as pool:
-    #     pool.map(os.system, ["python3.10 -W ignore al.py --task={0} --exp=habit".format(i) for i in ids])
+    #     pool.map(os.system, ["python3.10 -W ignore al.py --task={0} --exp=ass".format(i) for i in ids])
     # exit()
     # circuits = []
     # for biomodel_idx in ids:

@@ -7,6 +7,7 @@ from sb3_contrib import RecurrentPPO
 from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import VecNormalize
 
 from algorithms import SingleExhaustiveSolver, GeneticAlgorithmCombinatorics, GeneticAlgorithmNumerical
 from envs import MotionEquation, GRNEnv, LotkaVolterraEquation, SchrodingerEquation
