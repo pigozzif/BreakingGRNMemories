@@ -38,7 +38,10 @@ def get_algorithm(algorithm, **kwargs):
     if algorithm == "ppo":
         return PPO(**kwargs)
     elif algorithm == "rppo":
-        return RecurrentPPO(**kwargs)
+        return RecurrentPPO(seed=kwargs["seed"],
+                            policy=kwargs["policy"],
+                            env=kwargs["env"],
+                            verbose=kwargs["verbose"])
     elif algorithm == "single":
         return SingleExhaustiveSolver(env=kwargs["env"],
                                       seed=kwargs["seed"])

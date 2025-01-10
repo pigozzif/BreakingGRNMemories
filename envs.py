@@ -161,27 +161,28 @@ class GRNEnv(EquationEnv):
         super().__init__(obs_dim, 1.0)
         self.grn = grn
         self.key = jax.random.PRNGKey(seed)
-        self.mem_data = pickle.load(open(os.path.join("memories", exp, get_memory_file(biomodel_idx=grn.biomodel_idx,
+        self.mem_data = pickle.load(open(os.path.join("old_memories", exp, get_memory_file(biomodel_idx=grn.biomodel_idx,
                                                                                        r=r,
                                                                                        idx=idx)), "rb"))
         self.r = int(r)
-        self.s = self.mem_data[10 if exp == "ass" else 9]
+        self.s = self.mem_data[10 if self.mem_data[10] is not None else 9]
         self.ranges = [abs(self.mem_data[3][i][1] - self.mem_data[3][i][0]) for i in range(self.obs_dim)]
         self.ranges.pop(self.r)
         self.mean_relax = self.mem_data[4]
         self.response_reg = self.mem_data[5]
         self.stimulus_reg = self.mem_data[6]  # TODO: dataclass for all this stuff
-        self.prev_e = self._recoup()
-        self.mem_data[0] = self.prev_e.ys[:, -1]
+        # self.prev_e = self.mem_data[0]  # self._recoup()
+        self.prev_mean = None
+        # self.mem_data[0] = self.prev_e.ys[:, -1]
         self.x = self.get_init_conditions()
-        self.w = self.prev_e.ws[:, -1]  # self.mem_data[1]
+        self.w = self.mem_data[1]
         self.c = self.mem_data[2]
         self.r_scale = self.mem_data[7]
-        self.action_space = Box(low=-1.0, high=1.0, shape=(self.obs_dim - 2,), seed=seed)
+        self.action_space = Box(low=-1.0, high=1.0, shape=((self.obs_dim - 2) * 2,), seed=seed)
         self.scale_a = scale_a
         self.obs = None
         self.action_map = self._build_action_map()
-        self.grn.set_time(4000)
+        self.grn.set_time(2500)  # 4000)
         self.exp = exp
 
     def _build_action_map(self):
@@ -244,20 +245,23 @@ class GRNEnv(EquationEnv):
         return np.insert(actions, self.r, [0.0])
 
     def _get_reward(self, output):
-        # if self.response_reg == 1:
-        #     return - ((self.r_scale * self.mean_relax) / np.mean(output.ys[self.r, :]) - 1.0)
-        # return np.mean(output.ys[self.r, :]) / (self.mean_relax / self.r_scale) - 1.0
-        mean = np.mean(output.ys[self.r, :])
+        mean = np.nanmean(output.ys[self.r, :])
         if (self.exp == "habit" and self.response_reg == 1) or (self.exp == "sens" and self.response_reg == 2):
-            prev_mean = np.mean(self.prev_e.ys[self.r, :])
-            return mean - (prev_mean / 1.5)
+            # prev_mean = np.mean(self.prev_e.ys[self.r, :])
+            # return mean - (prev_mean / 1.5)
+            return (mean - self.prev_mean[self.r]) / self.prev_mean[self.r]
         elif (self.exp == "sens" and self.response_reg == 1) or (self.exp == "habit" and self.response_reg == 2):
-            prev_mean = np.mean(self.prev_e.ys[self.r, :])
-            return (prev_mean * 1.5) - mean
-        mean = np.mean(output.ys[self.r, :])
-        return -mean if self.response_reg == 1 else mean
+            # prev_mean = np.mean(self.prev_e.ys[self.r, :])
+            # return (prev_mean * 1.5) - mean
+            return (self.prev_mean[self.r] - mean) / self.prev_mean[self.r]
+        # return -mean if self.response_reg == 1 else mean
+        return (mean - self.prev_mean[self.r]) / self.prev_mean[self.r] \
+            if self.response_reg == 1 else (self.prev_mean[self.r] - mean) / self.prev_mean[self.r]
 
     def step(self, action):
+        if isinstance(action, np.ndarray):
+            idx = np.argmax(action) // 2
+            action = {self.action_map[idx]: self.mem_data[3][idx][np.argmax(action) % 2]}
         output = self._step(t=self.t,
                             y=self.x,
                             actions=action)
@@ -267,8 +271,15 @@ class GRNEnv(EquationEnv):
         self.obs = output.ys  # np.mean(output.ys, axis=1)
         reward = self._get_reward(output=output)
         self.t += output.ys.shape[1] * self.dt
+        info = self._get_info()
         del output
-        return self.obs, reward, self.t >= 29500, np.any(np.isnan(self.obs)), self._get_info()
+        self.prev_mean = np.nanmean(self.obs, axis=1)
+        # print(self.prev_mean)
+        return (self.prev_mean,
+                reward,
+                self.t >= 12500,  # 25500 + (4000 * 5),
+                np.any(np.isnan(self.obs)),
+                info)
 
     def _is_not_memory(self, e, response, response_reg):
         if e is None:
@@ -290,9 +301,10 @@ class GRNEnv(EquationEnv):
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed, options=options)
-        self.t = 25500  # 10000
+        self.t = 10000   # 25500
         self.w = self.mem_data[1]
         self.c = self.mem_data[2]
+        self.prev_mean = self.x
         return self.x, self._get_info()
 
 
