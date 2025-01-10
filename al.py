@@ -43,6 +43,8 @@ class AssociativeLearning(object):
         self.w_ss = self.reference.ws[:, :self.relax_t][:, -1]
         self.bounds = self._get_bounds()
         self.mem_circuits = {}
+        # self.circuits = [pickle.load(open(os.path.join("old_memories", "habit", c), "rb")) for c in
+        #                  os.listdir(os.path.join("old_memories", "habit")) if int(c.split(".")[0]) == int(model_id)]
 
     def _get_bounds(self):
         bounds = np.zeros((len(self.relax_y), 2))
@@ -59,6 +61,8 @@ class AssociativeLearning(object):
             for stimulus in range(len(self.relax_y)):
                 if response == stimulus:
                     continue
+                # if not any([c[8] == response and c[10 if c[9] is None else 9] == stimulus for c in self.circuits]):
+                #     continue
                 for regulation in [Regulation(1), Regulation(2)]:
                     curr_circuits.append(self.pretest_for_r(response, stimulus, regulation))
             self.mem_circuits[response] = list(curr_circuits)

@@ -16,7 +16,11 @@ if __name__ == "__main__":
     # with Pool(len(ids)) as pool:
     #     pool.map(os.system, ["python3.10 -W ignore al.py --task={0} --exp=ass".format(i) for i in ids])
     # exit()
-    # circuits = []
+    circuits = [file for file in os.listdir(os.path.join("old_memories", "ass")) if file.endswith("pickle")]
+    with Pool(8) as pool:
+        pool.map(os.system, ["python cognitive_cone.py --seed=0 --task={0} --exp=ass".format(c.replace(".pickle", ""))
+                             for c in circuits])
+    exit()
     # for biomodel_idx in ids:
     #     files = [file for file in os.listdir("memories/habit") if file.startswith(str(biomodel_idx) + ".")]
     #     circuits.extend(np.random.choice(files, size=min(2, len(files))))
