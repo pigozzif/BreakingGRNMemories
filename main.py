@@ -9,7 +9,6 @@ import numpy as np
 from grn import GeneRegulatoryNetwork
 
 # TODO: remake associative al.py exps until 69 including
-# TODO: 21-habit
 if __name__ == "__main__":
     # files = [file for file in os.listdir("memories") if file.endswith("pickle")]
     # ids = [3, 4, 6, 10, 69]  #, 16, 17, 22, 21, 23]  # , 26, 27, 483, 29, 31, 631, 203, 204, 209, 210, 275, 39, 50]
@@ -19,7 +18,7 @@ if __name__ == "__main__":
     #     pool.map(os.system, ["python -W ignore al.py --task={0} --exp=habit".format(i) for i in ids])
     # exit()
     exp = sys.argv[2]
-    circuits = [file for file in os.listdir(os.path.join("old_memories", exp)) if file.endswith("pickle")]
+    circuits = [file for file in os.listdir(os.path.join("memories", exp)) if file.endswith("pickle")]
     # with Pool(8) as pool:
     #     pool.map(os.system, ["python cognitive_cone.py --seed=0 --task={0} --exp=ass".format(c.replace(".pickle", ""))
     #                          for c in circuits])
@@ -43,7 +42,7 @@ if __name__ == "__main__":
     #             .replace(".",
     #                      "-") + "-" + exp,
     #             exp))
-    with Pool(len(circuits)) as pool:
+    with Pool(3) as pool:
         pool.map(os.system,
                  ["python3.10 -W ignore train.py --seed={0} --task={1} --exp={2} --algorithm=rppo --render=False".format(
                     sys.argv[1],

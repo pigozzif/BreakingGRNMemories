@@ -88,14 +88,14 @@ class GRNEnv(gymnasium.Env):
         if (self.exp == "habit" and self.response_reg == 1) or (self.exp == "sens" and self.response_reg == 2):
             # prev_mean = np.mean(self.prev_e.ys[self.r, :])
             # return mean - (prev_mean / 1.5)
-            return (mean - self.prev_mean) / self.prev_mean
+            return (mean - self.prev_mean[self.r]) / self.prev_mean[self.r]
         elif (self.exp == "sens" and self.response_reg == 1) or (self.exp == "habit" and self.response_reg == 2):
             # prev_mean = np.mean(self.prev_e.ys[self.r, :])
             # return (prev_mean * 1.5) - mean
-            return (self.prev_mean - mean) / self.prev_mean
+            return (self.prev_mean[self.r] - mean) / self.prev_mean[self.r]
         # return -mean if self.response_reg == 1 else mean
-        return (mean - self.prev_mean) / self.prev_mean \
-            if self.response_reg == 1 else (self.prev_mean - mean) / self.prev_mean
+        return (mean - self.prev_mean[self.r]) / self.prev_mean[self.r] \
+            if self.response_reg == 1 else (self.prev_mean[self.r] - mean) / self.prev_mean[self.r]
 
     def step(self, action):
         if isinstance(action, np.ndarray):
@@ -114,7 +114,7 @@ class GRNEnv(gymnasium.Env):
         self.t += output.ys.shape[1] * self.dt
         info = self._get_info()
         del output
-        self.prev_mean = np.nanmean(self.obs, axis=1)[self.r]
+        self.prev_mean = np.nanmean(self.obs, axis=1)
         return (self.prev_mean,
                 reward,
                 self.t >= 12500,  # 25500 + (4000 * 5),
@@ -125,9 +125,9 @@ class GRNEnv(gymnasium.Env):
         if e is None:
             return False
         elif (self.exp == "habit" and self.response_reg == 1) or (self.exp == "sens" and self.response_reg == 2):
-            return np.mean(e[response, :]) > (self.prev_mean / 1.5)
+            return np.mean(e[response, :]) > (self.prev_mean[self.r] / 1.5)
         elif (self.exp == "sens" and self.response_reg == 1) or (self.exp == "habit" and self.response_reg == 2):
-            return np.mean(e[response, :]) < (self.prev_mean * 1.5)
+            return np.mean(e[response, :]) < (self.prev_mean[self.r] * 1.5)
         elif response_reg == 1:
             return np.mean(e[response, :]) < self.r_scale * self.mean_relax
         return np.mean(e[response, :]) > self.mean_relax / self.r_scale
