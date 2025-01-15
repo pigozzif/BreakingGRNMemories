@@ -7,32 +7,22 @@ from sb3_contrib import RecurrentPPO
 from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import VecNormalize
 
 from algorithms import SingleExhaustiveSolver, GeneticAlgorithmCombinatorics, GeneticAlgorithmNumerical
-from envs import MotionEquation, GRNEnv, LotkaVolterraEquation, SchrodingerEquation
+from envs import GRNEnv
 from grn import GeneRegulatoryNetwork
-# from plotting import plot_reward
 from utils import parse_args, set_seed, get_file_name, create_system_rollout_module, discrete2continuous
 
 
 def get_env(env_name, seed):
-    if env_name == "motion":
-        return MotionEquation()
-    elif env_name == "lotkavolterra":
-        return LotkaVolterraEquation()
-    elif env_name == "schrodinger":
-        return SchrodingerEquation()
-    elif "-" in env_name:
-        ids = env_name.split("-")
-        grn = GeneRegulatoryNetwork.create(biomodel_idx=int(ids[0]))
-        return GRNEnv(seed=seed,
-                      exp=ids[-1],
-                      grn=grn,
-                      obs_dim=len(create_system_rollout_module(grn.config).grn_step.y_indexes),
-                      r=ids[1],
-                      idx=ids[2])
-    raise ValueError("Invalid env name: {}".format(env_name))
+    ids = env_name.split("-")
+    grn = GeneRegulatoryNetwork.create(biomodel_idx=int(ids[0]))
+    return GRNEnv(seed=seed,
+                  exp=ids[-1],
+                  grn=grn,
+                  obs_dim=len(create_system_rollout_module(grn.config).grn_step.y_indexes),
+                  r=ids[1],
+                  idx=ids[2])
 
 
 def get_algorithm(algorithm, **kwargs):
