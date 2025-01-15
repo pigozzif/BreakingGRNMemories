@@ -83,19 +83,19 @@ class GRNEnv(gymnasium.Env):
         actions = np.array([a * (r / self.scale_a) for a, r in zip(actions, self.ranges)])
         return np.insert(actions, self.r, [0.0])
 
-    def _get_reward(self, output):
+    def _get_reward(self, output, eps=1e-10):
         mean = np.nanmean(output.ys[self.r, :])
         if (self.exp == "habit" and self.response_reg == 1) or (self.exp == "sens" and self.response_reg == 2):
             # prev_mean = np.mean(self.prev_e.ys[self.r, :])
             # return mean - (prev_mean / 1.5)
-            return (mean - self.prev_mean[self.r]) / self.prev_mean[self.r]
+            return (mean - self.prev_mean[self.r]) / (self.prev_mean[self.r] + eps)
         elif (self.exp == "sens" and self.response_reg == 1) or (self.exp == "habit" and self.response_reg == 2):
             # prev_mean = np.mean(self.prev_e.ys[self.r, :])
             # return (prev_mean * 1.5) - mean
-            return (self.prev_mean[self.r] - mean) / self.prev_mean[self.r]
+            return (self.prev_mean[self.r] - mean) / (self.prev_mean[self.r] + eps)
         # return -mean if self.response_reg == 1 else mean
-        return (mean - self.prev_mean[self.r]) / self.prev_mean[self.r] \
-            if self.response_reg == 1 else (self.prev_mean[self.r] - mean) / self.prev_mean[self.r]
+        return (mean - self.prev_mean[self.r]) / (self.prev_mean[self.r] + eps) \
+            if self.response_reg == 1 else (self.prev_mean[self.r] - mean) / (self.prev_mean[self.r] + eps)
 
     def step(self, action):
         if isinstance(action, np.ndarray):
@@ -109,12 +109,13 @@ class GRNEnv(gymnasium.Env):
         self.c = output.cs[:, -1]
         self.obs = output.ys  # np.mean(output.ys, axis=1)
         r = self._get_reward(output=output)
-        reward = (r - np.median(self.rewards)) / (np.std(self.rewards) if len(self.rewards) > 1 else 1.0)
+        if np.isnan(r):
+            r = 0.0
+        reward = (r - np.nanmedian(self.rewards)) / (np.nanstd(self.rewards) if len(self.rewards) > 1 else 1.0)
         self.rewards.append(r)
         self.t += output.ys.shape[1] * self.dt
         info = self._get_info()
-        del output
-        self.prev_mean = np.nanmean(self.obs, axis=1)
+        self.prev_mean = np.nan_to_num(np.nanmean(self.obs, axis=1), nan=0.0, copy=False)
         return (self.prev_mean,
                 reward,
                 self.t >= 12500,  # 25500 + (4000 * 5),
