@@ -1,0 +1,18 @@
+#{"t_start": 1734076736.0019445, "env_id": "None"}
+r,l,t,is_broken
+0.0,1,2.236764,False
+nan,1,2.98832,False
+0.0,1,4.793898,False
+nan,1,5.575509,False
+0.0,1,6.891301,False
+nan,1,7.662427,False
+0.0,1,8.932156,False
+nan,1,9.712192,False
+0.0,1,11.520591,False
+nan,1,13.252171,False
+nan,1,14.063547,False
+0.0,1,16.892967,False
+nan,1,17.712791,False
+nan,1,18.48555,False
+0.0,1,20.397001,False
+nan,1,21.175611,False

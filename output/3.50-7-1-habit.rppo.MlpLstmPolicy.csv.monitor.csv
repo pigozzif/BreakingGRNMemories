@@ -1,0 +1,27 @@
+#{"t_start": 1736408429.450052, "env_id": "None"}
+r,l,t,is_broken
+nan,5,4.857832,False
+-inf,5,8.476642,False
+nan,5,14.559629,False
+nan,5,20.897797,False
+nan,5,24.514471,False
+nan,5,28.753467,False
+nan,5,33.407336,False
+-inf,5,37.009618,False
+nan,5,42.469484,False
+nan,5,47.240316,False
+nan,5,51.389555,False
+nan,5,55.518526,False
+nan,5,60.395248,False
+-inf,5,64.126919,False
+nan,5,67.720923,False
+nan,5,73.720211,False
+nan,5,78.08603,False
+nan,5,83.270442,False
+-inf,5,87.057127,False
+nan,5,91.716776,False
+nan,5,95.307649,False
+nan,5,99.437955,False
+-inf,5,103.040118,False
+nan,5,106.639862,False
+-inf,5,110.442144,False
