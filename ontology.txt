@@ -1,0 +1,30 @@
+model_id;species.name;species.common;taxon;homo;gene.ontology
+27;Xenopus laevis;African clawed frog;lower vert.;;MAPK cascade
+2;Tetronarce californica;Pacific electric ray;lower vert.;;cell surface receptor sig. pathway,neuromuscular synaptic trans.,trans. of nerve impulse
+3;Amphibia;amphibians;lower vert.;cell cycle,mitotic;mitotic cell cycle
+4;Amphibia;amphibians;lower vert.;cell cycle,mitotic;mitotic cell cycle
+5;Opisthokonta;eukaryotes;eukaryotes;cell cycle,mitotic;mitotic cell cycle
+6;Opisthokonta;eukaryotes;eukaryotes;cell cycle,mitotic;mitotic cell cycle
+10;Xenopus laevis;African clawed frog;lower vert.;REACT_634;MAPK cascade
+69;Homo sapiens;Human;mammals;cell cycle,mitotic;mitotic cell cycle
+16;Drosophila melanogaster;fruit fly;insects;;reg. of circadian rhythm
+17;Lactococcus lactis;firmicutes;bacteria;;lactate metabolic process,pyruvate metabolic process
+22;Drosophila melanogaster;fruit fly;insects;;reg. of circadian rhythm
+21;Drosophila melanogaster;fruit fly;insects;;reg. of circadian rhythm
+23;Saccharum officinarum;sugar cane;plants;;sucrose biosynthetic proc.
+26;Xenopus laevis;African clawed frog;lower vert.;;MAPK cascade
+483;cellular organisms;cellular organisms;n/a;;reg. of gene expression
+29;Xenopus laevis;African clawed frog;lower vert.;;MAPK cascade
+31;Xenopus laevis;African clawed frog;lower vert.;;MAPK cascade
+631;Arabidopsis thaliana;thale cress;plants;;reg. of circadian rhythm,entrainment of circadian clock by photoperiod
+203;Mus musculus,Homo sapiens;house mouse,human;mammals;;stem cell differentiation
+204;Mus musculus,Homo sapiens;house mouse,human;mammals;;stem cell differentiation
+209;Homo sapiens;human;mammals;;trophectodermal cell fate,reg. of endothermal cell fate specification,stem cell differentiation
+210;Homo sapiens;human;mammals;;trophectodermal cell fate,reg. of endothermal cell fate specification,stem cell differentiation
+275;Vertebrata;vert.;vert.;;response to retinoic acid,somitogenesis,cellular response to fibroblast growth factor stimulus
+39;Xenopus laevis;African clawed frog;lower vert.;;calcium-mediated sig.,inositol phosphate-mediated signaling
+50;cellular organisms;cellular organisms;cellular;;organic subs. catabolic proc.
+35;cellular organisms;cellular organisms;cellular;;reg. of circadian rhythm
+36;Drosophila melanogaster;fruit fly;insects;;reg. of circadian rhythm
+37;Physarum polycephalum;plasmodial slime molds;slime molds;;far-red light sig. pathway,reg. of sporulation resulting in formation of a cellular spore
+38;Escherichia coli;enterobacteria;bacteria;;phosphoenolpyruvate-dependent sugar phosphotransferase system,reg. of glucose transport
