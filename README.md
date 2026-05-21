@@ -6,7 +6,6 @@ Clone the repo:
 ```
 https://github.com/pigozzif/BreakingGRNMemories.git
 ```
-### Requirements
 Install Python dependencies with pip:
 ```
 pip install -r requirements.txt
