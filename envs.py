@@ -13,7 +13,7 @@ from utils import create_system_rollout_module, get_memory_file
 
 class GRNEnv(gymnasium.Env):
 
-    def __init__(self, seed, exp, obs_dim, grn, r, idx, scale_a=1.0, dt=0.01):
+    def __init__(self, seed, exp, obs_dim, grn, r, idx, dt, scale_a=1.0):
         super().__init__()
         self.obs_dim = obs_dim
         self.dt = dt
@@ -21,7 +21,7 @@ class GRNEnv(gymnasium.Env):
         self.grn = grn
         self.key = jax.random.PRNGKey(seed)
         self.mem_data = pickle.load(
-            open(os.path.join("memories", exp, get_memory_file(biomodel_idx=grn.biomodel_idx,
+            open(os.path.join("old_memories", exp, get_memory_file(biomodel_idx=grn.biomodel_idx,
                                                                r=r,
                                                                idx=idx)), "rb"))
         self.r = int(r)
@@ -41,7 +41,7 @@ class GRNEnv(gymnasium.Env):
         self.scale_a = scale_a
         self.obs = None
         self.action_map = self._build_action_map()
-        self.grn.set_time(500)  # 4000)
+        self.grn.set_time(100)  # 4000)
         self.grn.NUM_PULSES = 1
         self.exp = exp
         self.rewards = [self.mean_relax]

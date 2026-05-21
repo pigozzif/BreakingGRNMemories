@@ -8,21 +8,23 @@ import numpy as np
 
 from grn import GeneRegulatoryNetwork
 
+
+def iterate_process(command, num=5):
+    for _ in range(num):
+        os.system(command)
+
+
 # TODO: remake associative al.py exps until 69 including
 if __name__ == "__main__":
     # files = [file for file in os.listdir("memories") if file.endswith("pickle")]
     # ids = [3, 4, 6, 10, 69]  #, 16, 17, 22, 21, 23]  # , 26, 27, 483, 29, 31, 631, 203, 204, 209, 210, 275, 39, 50]
-    # ids = [2, 3, 4, 5, 6, 10, 69, 16, 17, 22, 21, 23, 26, 27, 483, 29, 31, 631, 203, 204, 209, 210, 275, 39, 50, 35, 36,
-    #        37, 38]
-    # with Pool(3) as pool:
-    #     pool.map(os.system, ["python -W ignore al.py --task={0} --exp=habit".format(i) for i in ids])
-    # exit()
+    ids = [2, 3, 4, 5, 6, 10, 69, 16, 17, 22, 21, 23, 26, 27, 483, 29, 31, 631, 203, 204, 209, 210, 275, 39, 50, 35, 36,
+           37, 38]
+    with Pool(4) as pool:
+        pool.map(os.system, ["python -W ignore al.py --task={0} --exp=ass".format(i) for i in ids])
+    exit()
     exp = sys.argv[2]
-    circuits = [file for file in os.listdir(os.path.join("memories", exp)) if file.endswith("pickle")]
-    # with Pool(8) as pool:
-    #     pool.map(os.system, ["python cognitive_cone.py --seed=0 --task={0} --exp=ass".format(c.replace(".pickle", ""))
-    #                          for c in circuits])
-    # exit()
+    # circuits = [file for file in os.listdir(os.path.join("memories", exp)) if file.endswith("pickle")]
     # for biomodel_idx in ids:
     #     files = [file for file in os.listdir("memories/habit") if file.startswith(str(biomodel_idx) + ".")]
     #     circuits.extend(np.random.choice(files, size=min(2, len(files))))
@@ -42,9 +44,10 @@ if __name__ == "__main__":
     #             .replace(".",
     #                      "-") + "-" + exp,
     #             exp))
-    with Pool(3) as pool:
+    circuits = ['26.8.1.pickle', '16.0.4.pickle', '50.4.1.pickle', '16.0.2.pickle', '26.4.1.pickle', '26.7.2.pickle']
+    with Pool(1) as pool:
         pool.map(os.system,
-                 ["python3.10 -W ignore train.py --seed={0} --task={1} --exp={2} --algorithm=rppo --render=False".format(
+                 ["python -W ignore train.py --seed={0} --task={1} --exp={2} --algorithm=rppo --render=False".format(
                     sys.argv[1],
                     circuit.strip(
                         ".pickle")

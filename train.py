@@ -11,18 +11,20 @@ from stable_baselines3.common.monitor import Monitor
 from algorithms import SingleExhaustiveSolver, GeneticAlgorithmCombinatorics, GeneticAlgorithmNumerical
 from envs import GRNEnv
 from grn import GeneRegulatoryNetwork
-from utils import parse_args, set_seed, get_file_name, create_system_rollout_module, discrete2continuous
+from utils import parse_args, set_seed, get_file_name, create_system_rollout_module, discrete2continuous, \
+    CheckpointAndRNGCallback
 
 
-def get_env(env_name, seed):
+def get_env(env_name, seed, dt=0.1):
     ids = env_name.split("-")
-    grn = GeneRegulatoryNetwork.create(biomodel_idx=int(ids[0]))
+    grn = GeneRegulatoryNetwork.create(biomodel_idx=int(ids[0]), deltaT=dt)
     return GRNEnv(seed=seed,
                   exp=ids[-1],
                   grn=grn,
                   obs_dim=len(create_system_rollout_module(grn.config).grn_step.y_indexes),
                   r=ids[1],
-                  idx=ids[2])
+                  idx=ids[2],
+                  dt=dt)
 
 
 def get_algorithm(algorithm, **kwargs):
@@ -49,12 +51,12 @@ def get_algorithm(algorithm, **kwargs):
     raise ValueError("Invalid algorithm name: {}".format(algorithm))
 
 
-def train(seed, task, algorithm, policy, num_workers, num_steps=int(1e5)):
+def train(seed, task, algorithm, policy, num_workers, num_steps=int(1e4), max_steps=int(1e4)):
     file_name = get_file_name(seed=seed, task=task, algorithm=algorithm, policy=policy)
     env = get_env(env_name=task, seed=seed)
     if algorithm != "ga" and algorithm != "es":
         env = Monitor(env=env,
-                      filename=os.path.join("output", file_name + ".csv"),
+                      filename=os.path.join("new_output", file_name + ".csv"),
                       info_keywords=("is_broken",))
     model = get_algorithm(algorithm=algorithm,
                           seed=seed,
@@ -63,12 +65,22 @@ def train(seed, task, algorithm, policy, num_workers, num_steps=int(1e5)):
                           file_name=".".join([file_name, "csv"]),
                           num_workers=num_workers,
                           verbose=1)
-    # model.load(os.path.join("models", file_name))
+    past_models = [file for file in os.listdir("models") if file_name in file]
+    if past_models:
+        curr_number_steps = max([int(file.split("_")[1]) for file in past_models if file.endswith("zip")])
+        print(f"load {curr_number_steps}")
+        model.load([os.path.join("models", file.replace(".zip", "")) for file in os.listdir("models")
+                    if file.split("_")[1] == str(curr_number_steps)][0])
+        if curr_number_steps >= max_steps:
+            return model
     # return model
-    model.learn(total_timesteps=num_steps, progress_bar=True)
-    model.save(os.path.join("models", file_name))
+    model.learn(total_timesteps=num_steps,
+                # callback=CheckpointAndRNGCallback(save_freq=num_steps, name_prefix=file_name),
+                progress_bar=True)
+    # model.save(os.path.join("models", file_name))
     if algorithm != "ga" and algorithm != "es":
-        os.rename(os.path.join("output", file_name + ".csv.monitor.csv"), os.path.join("output", file_name + ".csv"))
+        os.rename(os.path.join("new_output", file_name + ".csv.monitor.csv"),
+                  os.path.join("new_output", file_name + ".csv"))
     return model
 
 
@@ -121,12 +133,3 @@ if __name__ == "__main__":
     os.system("rm {}/*".format(os.path.join("pop", ".".join([str(args.seed), str(args.task), str(args.algorithm),
                                                              str(args.policy)]))))
     os.system("rm {}/*".format(os.path.join("envs")))
-    # plot_reward(file_name=get_file_name(seed=args.seed,
-    #                                     task=args.task,
-    #                                     algorithm=args.algorithm,
-    #                                     policy=args.policy))
-    # if args.render:
-    #     save_rendering(model=agent, file_name=".".join([get_file_name(seed=args.seed,
-    #                                                                   task=args.task,
-    #                                                                   algorithm=args.algorithm,
-    #                                                                   policy=args.policy), "png"]))

@@ -41,7 +41,7 @@ class GeneRegulatoryNetwork(object):
                  atol=1e-3,
                  rtol=1e-12,
                  mxstep=50000,
-                 deltaT=0.01,
+                 deltaT=0.1,
                  n_secs=2500):
         self.biomodel_idx = biomodel_idx
         self.config = Dict()

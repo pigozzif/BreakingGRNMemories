@@ -66,5 +66,22 @@ def compute_cognitive_cone(seed, memory, num_samples=100):
 if __name__ == "__main__":
     args = parse_args()
     set_seed(s=args.seed)
-    compute_cognitive_cone(seed=args.seed,
-                           memory=".".join([args.task, "pickle"]).replace("-", "."))
+    # compute_cognitive_cone(seed=args.seed,
+    #                        memory=".".join([args.task, "pickle"]).replace("-", "."))
+    n_images = 5
+    fig, axes = plt.subplots(figsize=(8 * n_images, 5 * n_images), nrows=n_images, ncols=n_images)
+    images = np.random.choice([file for file in os.listdir("figures") if file.startswith("cone.")],
+                              size=n_images ** 2,
+                              replace=False).reshape(n_images, n_images)
+    import matplotlib.image as mpimg
+
+    for i in range(n_images):
+        for j in range(n_images):
+            axes[i][j].imshow(mpimg.imread(os.path.join("figures", images[i][j])))
+            axes[i][j].set_xticks([])
+            axes[i][j].set_yticks([])
+    axes[2][0].set_ylabel("Avg. dist. from baseline attractor", fontsize=35)
+    axes[2][0].yaxis.set_label_coords(-0.25, 0.4)
+    fig.text(0.5, 0.05, "simulated time [s]", ha="center", fontsize=35)
+    plt.savefig("figures/cones{}.png".format(args.seed))
+    plt.close()

@@ -1,20 +1,25 @@
 import argparse
 import importlib
+import os
+import pickle
 import random
 
+import gymnasium
 import numpy as np
 import torch
 from autodiscjax.modules.grnwrappers import GRNRollout
+from scipy.integrate import ode
+from stable_baselines3.common.callbacks import CheckpointCallback
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--task", type=str, default="26-4-1-habit")
-    parser.add_argument("--algorithm", type=str, default="rppo")
+    parser.add_argument("--task", type=str, default="16-1-2-ass")
+    parser.add_argument("--algorithm", type=str, default="es")
     parser.add_argument("--policy", type=str, default="MlpLstmPolicy")
     parser.add_argument("--render", type=bool, default=False)
-    parser.add_argument("--exp", type=str, default="habit")
+    parser.add_argument("--exp", type=str, default="ass")
     parser.add_argument("--np", type=int, default=7)
     return parser.parse_args()
 
@@ -23,6 +28,11 @@ def set_seed(s):
     random.seed(s)
     np.random.seed(s)
     torch.manual_seed(s)
+    torch.cuda.manual_seed(s)
+    torch.cuda.manual_seed_all(s)
+    # some cudnn methods can be random even after fixing the seed unless you tell it to be deterministic
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 def get_file_name(seed, task, algorithm, policy):
@@ -65,3 +75,63 @@ def discrete2continuous(action, env, num_steps):
         control[start: start + window, action // 2] = -1.0 if action % 2 else 1.0
         start += window * 2
     return control
+
+
+class SeedEnvWrapper(gymnasium.Wrapper):
+    def __init__(self, env, seed):
+        super().__init__(env)
+        self.seed = seed
+        self.env.action_space.seed(seed)
+
+    def reset(self, **kwargs):
+        kwargs["seed"] = self.seed
+        obs, _ = self.env.reset(**kwargs)
+        return obs, _
+
+    def step(self, action):
+        return self.env.step(action)
+
+
+def ode_call_optim(jax_model, y, w, c, t, deltaT):
+    solver = ode(jax_model.ratefunc)
+    solver.set_integrator('dopri5')
+    solver.set_initial_value(y, t)
+    while solver.successful() and solver.t < t + deltaT:
+        solver.integrate(solver.t + deltaT)
+        y[:] = solver.y
+    t_new = t + deltaT
+    w_new = jax_model.assignmentfunc(y, w, c, t_new)
+    return y, w_new, c, t_new
+
+
+class CheckpointAndRNGCallback(CheckpointCallback):
+
+    def __init__(self, save_freq, name_prefix, save_path="models", save_replay_buffer=True,
+                 save_vecnormalize=True, save_rng=True, verbose=0):
+        super().__init__(save_freq, save_path, name_prefix, save_replay_buffer, save_vecnormalize, verbose)
+        self.save_rng = save_rng
+        self.prev_paths = None
+
+    def _checkpoint_path(self, checkpoint_type="", extension=""):
+        return os.path.join(self.save_path, f"{self.name_prefix}_{checkpoint_type}{self.num_timesteps}_steps.{extension}")
+
+    def _on_step(self):
+        if self.prev_paths is not None and self.n_calls % self.save_freq == 0:
+            print("SAVEEEEEEEEEE")
+            os.remove(self.prev_paths[0])
+            os.remove(self.prev_paths[1])
+        super()._on_step()
+        if self.save_rng and self.n_calls % self.save_freq == 0:
+            rng_path = self._checkpoint_path("rng_", extension="pkl")
+            rng_state = {
+                "python": random.getstate(),
+                "numpy": np.random.get_state(),
+                "torch": torch.get_rng_state(),
+                "torch_cuda": torch.cuda.get_rng_state() if torch.cuda.is_available() else None
+            }
+            with open(rng_path, "wb") as f:
+                pickle.dump(rng_state, f)
+            if self.verbose > 1:
+                print(f"Saving rng checkpoint to {rng_path}")
+            self.prev_paths = (self._checkpoint_path(extension="zip"), rng_path)
+        return True

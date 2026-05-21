@@ -1,4 +1,3 @@
-import os
 import pickle
 from dataclasses import dataclass
 from enum import IntEnum
@@ -22,6 +21,7 @@ class MemoryCircuit(object):
     is_ucs: bool
     ys: np.array
     ws: np.array
+    cs: np.array
 
 
 class AssociativeLearning(object):
@@ -34,7 +34,7 @@ class AssociativeLearning(object):
         self.grn = GeneRegulatoryNetwork.create(biomodel_idx=model_id, **kwargs)
         self.r_scale_up = r_scale_up
         self.n_secs = n_secs
-        self.grn.set_time(n_secs=n_secs * 3)
+        self.grn.set_time(n_secs=n_secs)
         self.reference = self.relax()
         self.grn.set_time(n_secs=self.n_secs)
         self.relax_t = int(self.n_secs / self.grn.config.deltaT)
@@ -43,8 +43,8 @@ class AssociativeLearning(object):
         self.w_ss = self.reference.ws[:, :self.relax_t][:, -1]
         self.bounds = self._get_bounds()
         self.mem_circuits = {}
-        # self.circuits = [pickle.load(open(os.path.join("old_memories", "habit", c), "rb")) for c in
-        #                  os.listdir(os.path.join("old_memories", "habit")) if int(c.split(".")[0]) == int(model_id)]
+        self.circuits = [pickle.load(open(os.path.join("memories", "habit2", c), "rb")) for c in
+                         os.listdir(os.path.join("memories", "habit2")) if int(c.split(".")[0]) == int(model_id)]
 
     def _get_bounds(self):
         bounds = np.zeros((len(self.relax_y), 2))
@@ -61,7 +61,7 @@ class AssociativeLearning(object):
             for stimulus in range(len(self.relax_y)):
                 if response == stimulus:
                     continue
-                # if not any([c[8] == response and c[10 if c[9] is None else 9] == stimulus for c in self.circuits]):
+                # if not any([c[8] == response for c in self.circuits]):
                 #     continue
                 for regulation in [Regulation(1), Regulation(2)]:
                     curr_circuits.append(self.pretest_for_r(response, stimulus, regulation))
@@ -83,6 +83,7 @@ class AssociativeLearning(object):
                                  response_reg=Regulation(1),
                                  ys=x2.ys,
                                  ws=x2.ws,
+                                 cs=x2.cs,
                                  is_ucs=True)
         elif (mean_x2 <= (1 / self.r_scale_up) * np.mean(self.relax_y[response, :])
               and mean_x2 <= (1 / self.r_scale_up) * np.mean(
@@ -93,6 +94,7 @@ class AssociativeLearning(object):
                                  response_reg=Regulation(2),
                                  ys=x2.ys,
                                  ws=x2.ws,
+                                 cs=x2.cs,
                                  is_ucs=True)
         return MemoryCircuit(stimulus=stimulus,
                              response=response,
@@ -100,7 +102,8 @@ class AssociativeLearning(object):
                              response_reg=Regulation(0),
                              is_ucs=False,
                              ys=None,
-                             ws=None)
+                             ws=None,
+                             cs=None)
 
     def eval_mem_for_r(self, response, exp="ass"):
         if not self.mem_circuits[response]:
@@ -150,7 +153,7 @@ class AssociativeLearning(object):
             del e1
         return is_mem
 
-    def test_habituation(self, ucs_circuit, n_stim=4, scale=1.5, increment=500):
+    def test_habituation(self, ucs_circuit, n_stim=2, scale=1.5, increment=500):
         e = None
         r = self.relax(t0=self.n_secs * 2,
                        y0=ucs_circuit.ys[:, -1],
@@ -246,9 +249,11 @@ class AssociativeLearning(object):
         # new_bounds = self.bounds.copy()
         # new_bounds[:, 0] *= self.us_scale
         # new_bounds[:, 1] /= self.us_scale
-        idx = max([int(file.split(".")[2]) for file in os.listdir(os.path.join("memories", exp))
+        if len([file for file in os.listdir(os.path.join("new_memories", exp)) if file.startswith(self.i)]) > 50:
+            exit()
+        idx = max([int(file.split(".")[2]) for file in os.listdir(os.path.join("new_memories", exp))
                    if file.startswith(".".join([str(self.i), str(r), ""]))] + [0]) + 1
-        file_name = os.path.join("memories",
+        file_name = os.path.join("new_memories",
                                  exp,
                                  ".".join([str(self.i),
                                            str(r),
@@ -264,7 +269,8 @@ class AssociativeLearning(object):
                      self.r_scale_up,
                      r,
                      ucs,
-                     cs],
+                     cs,
+                     np.nanmean(e.ys, axis=1)],
                     open(file_name, "wb"))
 
 
@@ -280,3 +286,4 @@ if __name__ == "__main__":
     arguments = parse_args()
     set_seed(arguments.seed)
     learn(arguments.seed, arguments.task.split("-")[0], exp=arguments.exp)
+    print(arguments.task)
