@@ -17,4 +17,4 @@ By running:
 ```
 python plotting.py
 ```
-You will produce all the figures plotting experimental data from the paper (3, 6, 7, 8, and 9) and save them in the directory `figures`.
+You will produce all the figures plotting experimental data from the paper (3, 6, 7, 8, and 9) and save them in the directory `figures`. All the raw data necessary are stored in the `output` directory.
