@@ -30,7 +30,7 @@ def simulate_random(args):
 
 
 if __name__ == "__main__":
-    networks = [3, 4, 16, 29, 31, 39]
+    networks = [17, 22, 21, 23, 26, 27, 483, 29, 31, 631, 203, 204, 209, 210, 275, 39, 50, 35, 36, 37, 38]
     all_results = []
     with open("optima.txt", "w") as file:
         file.write(";".join(["seed", "model_id"] + NETWORK_PROPERTIES + DYNAMICAL_PROPERTIES + ["memories.perc"] +
