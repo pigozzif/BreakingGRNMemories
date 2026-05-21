@@ -14,13 +14,12 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--task", type=str, default="16-1-2-ass")
-    parser.add_argument("--algorithm", type=str, default="es")
-    parser.add_argument("--policy", type=str, default="MlpLstmPolicy")
-    parser.add_argument("--render", type=bool, default=False)
-    parser.add_argument("--exp", type=str, default="ass")
-    parser.add_argument("--np", type=int, default=7)
+    parser.add_argument("--seed", type=int, default=0, help="random seed")
+    parser.add_argument("--task", type=str, default="16-1-2-ass", help="specific memory to test")
+    parser.add_argument("--algorithm", type=str, default="es", help="optimization algorithm to train")
+    parser.add_argument("--policy", type=str, default="MlpLstmPolicy", help="controller policy (only for RL)")
+    parser.add_argument("--exp", type=str, default="ass", help="memory experiment (only ass for associative is available)")
+    parser.add_argument("--np", type=int, default=7, help="n. of parallel workers")
     return parser.parse_args()
 
 
