@@ -1,18 +1,13 @@
 import os
 
-import gymnasium.spaces
-import numpy as np
-from matplotlib import pyplot as plt
 from sb3_contrib import RecurrentPPO
 from stable_baselines3 import PPO
-from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 
 from algorithms import SingleExhaustiveSolver, GeneticAlgorithmCombinatorics, GeneticAlgorithmNumerical
 from envs import GRNEnv
 from grn import GeneRegulatoryNetwork
-from utils import parse_args, set_seed, get_file_name, create_system_rollout_module, discrete2continuous, \
-    CheckpointAndRNGCallback
+from utils import parse_args, set_seed, get_file_name, create_system_rollout_module
 
 
 def get_env(env_name, seed, dt=0.1):
@@ -75,48 +70,12 @@ def train(seed, task, algorithm, policy, num_workers, num_steps=int(1e4), max_st
             return model
     # return model
     model.learn(total_timesteps=num_steps,
-                # callback=CheckpointAndRNGCallback(save_freq=num_steps, name_prefix=file_name),
                 progress_bar=True)
     # model.save(os.path.join("models", file_name))
     if algorithm != "ga" and algorithm != "es":
         os.rename(os.path.join("new_output", file_name + ".csv.monitor.csv"),
                   os.path.join("new_output", file_name + ".csv"))
     return model
-
-
-def evaluate(model):
-    mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=1)
-    return mean_reward, std_reward
-
-
-def save_rendering(model, file_name, num_steps=1):
-    vec_env = model.get_env()
-    obs = vec_env.reset()
-    data = []
-    actions = []
-    lstm_states = None
-    episode_starts = np.ones((1,), dtype=bool)
-    env = vec_env.envs[0].env
-    fig, axes = plt.subplots(figsize=(8, 10), nrows=2, ncols=1)
-    for i in range(num_steps):
-        action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_starts, deterministic=True)
-        obs, rewards, dones, info = vec_env.step(action)
-        episode_starts = dones
-        data.append(info[0]["full_obs"])
-        if isinstance(env.action_space, gymnasium.spaces.Discrete):
-            action = discrete2continuous(action=action,
-                                         env=env,
-                                         num_steps=info[0]["full_obs"].shape[1])
-        actions.append(action)
-    axes[0].plot(np.hstack(data).T, label=env.get_species_names())
-    axes[0].set_title("species", fontsize=15)
-    axes[1].plot(np.hstack(actions), label=env.get_action_names())
-    axes[1].set_title("actions", fontsize=15)
-    for ax in axes:
-        ax.set_xlabel("sim. time [s]", fontsize=10)
-        ax.legend()
-    plt.savefig(os.path.join("render", file_name))
-    plt.close()
 
 
 if __name__ == "__main__":
