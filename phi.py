@@ -14,7 +14,7 @@ from train import get_env
 
 
 PHASES = ["relax", "train", "relapse", "test", "reset", "verify"]
-MEASURES = ["integrated", "emergence"]
+MEASURES = ["emergence"]
 
 
 def test_network(al, ucs_circuit, cs_circuit, env, control, action):
@@ -64,7 +64,7 @@ def compute_integrated_info(data):
     phi_results = local_phi_id(0, 1, data_reduced)
     info["synergy"] = np.nan_to_num(phi_results.nodes[(((0, 1),), ((0, 1),))]["pi"], nan=0.0, posinf=0.0, neginf=0.0)
     info["causation"] = np.nan_to_num(phi_results.nodes[(((0, 1),), ((0,),))]["pi"] + phi_results.nodes[(((0, 1),), ((1,),))]["pi"], nan=0.0, posinf=0.0, neginf=0.0)
-    info["integrated"] = np.nan_to_num(local_phi_r(phi_results), nan=0.0, posinf=0.0, neginf=0.0)
+    # info["integrated"] = np.nan_to_num(local_phi_r(phi_results), nan=0.0, posinf=0.0, neginf=0.0)
     info["emergence"] = info["synergy"] + info["causation"]
     # period = 250000
     # for start, period_name in zip(range(0, period * len(PHASES), period), PHASES):
@@ -85,30 +85,7 @@ if __name__ == "__main__":
     file_name = "info.txt" if not is_random else "info_random.txt"
     with open(file_name, "w") as file:
         file.write(";".join(col_names) + "\n")
-    # ids = [50, 10, 37, 69, 26, 23, 29, 22, 16, 204, 631, 4, 39, 31, 27]
-    # num_secs = 2500 * len(PHASES)
-    # for biomodel_idx in ids:
-    #     grn = GeneRegulatoryNetwork.create(biomodel_idx=biomodel_idx,
-    #                                        deltaT=0.1)
-    #     grn.set_time(n_secs=num_secs)
-    #     output, _ = grn(key=key)
-    #     information = compute_integrated_info(data=np.nan_to_num(output.ys, nan=0.0, copy=True))
-    #     with open(file_name, "a") as f:
-    #         measures = [biomodel_idx]
-    #         period = int(2500 / 0.1)
-    #         for start in range(0, period * len(PHASES), period):
-    #             for measure in MEASURES:
-    #                 measures.append(np.nanmedian(information[measure][start: start + period]))
-    #         f.write(";".join([str(measure) for measure in measures]) + "\n")
-    # exit()
-    # from time import time
-    # s = time()
-    # for i in range(1, 5614):
-    #     grn = GeneRegulatoryNetwork.create(biomodel_idx=16,
-    #                                        deltaT=0.01,
-    #                                        n_secs=10000)
-    #     output, data = grn(key=key)
-    #     print(i, (time() - s) / i)
+
     sim_data = {}
     for file in os.listdir("output"):
         if "single" not in file or not file.endswith("csv"):
@@ -136,12 +113,8 @@ if __name__ == "__main__":
                     sim_data[grn_idx] = [(env, control, action)]
                 else:
                     sim_data[grn_idx].append((env, control, action))
-                # print({control: env.mem_data[3][control][action % 2]})
-    exit()
+
     for idx, tasks in sim_data.items():
-        # if idx == 50 or idx == 10 or idx == 37 or idx == 69 or idx == 26 or idx == 23 or idx == 29 or idx == 22 or idx == 16\
-        #         or idx == 204 or idx == 631 or idx == 4 or idx == 31 or idx == 27 or idx == 39:
-        #     continue
         print(idx)
         al = AssociativeLearning(seed=0, model_id=idx)
         tasks = random.sample(tasks, k=min(len(tasks), 10))
