@@ -54,7 +54,7 @@ def get_graph_features(graph):
 
 
 def get_network_properties(biomodel_id):
-    model_data = sbmltoodejax.parse.ParseSBMLFile(f"../GRNs/data/biomodel_{biomodel_id}.xml")
+    model_data = sbmltoodejax.parse.ParseSBMLFile(f"data/biomodel_{biomodel_id}.xml")
     network = sbml2networkx(biomodel_data=model_data)
     features = get_graph_features(graph=network)
     return features
